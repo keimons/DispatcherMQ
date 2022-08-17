@@ -1,7 +1,8 @@
 package com.keimons.dmq.internal;
 
+import com.keimons.dmq.core.Actuator;
 import com.keimons.dmq.core.Handler;
-import com.keimons.dmq.core.Wrapper;
+import com.keimons.dmq.core.Interceptor;
 
 /**
  * 带有3个执行屏障的任务
@@ -14,27 +15,28 @@ public class WrapperTask3 extends AbstractWrapperTask {
 
 	final Object fence0;
 
-	final Invoker invoker0;
+	final Actuator actuator0;
 
 	final Object fence1;
 
-	final Invoker invoker1;
+	final Actuator actuator1;
 
 	final Object fence2;
 
-	final Invoker invoker2;
+	final Actuator actuator2;
 
-	public WrapperTask3(Handler<Wrapper<Runnable>> handler, Runnable task,
-						Object fence0, Invoker invoker0, Object fence1, Invoker invoker1,
-						Object fence2, Invoker invoker2) {
+	public WrapperTask3(Handler<Runnable> handler, Runnable task,
+						Object fence0, Actuator actuator0,
+						Object fence1, Actuator actuator1,
+						Object fence2, Actuator actuator2) {
 		super(handler, task, 3);
 		this.fence0 = fence0;
-		this.invoker0 = invoker0;
+		this.actuator0 = actuator0;
 		this.fence1 = fence1;
-		this.invoker1 = invoker1;
+		this.actuator1 = actuator1;
 		this.fence2 = fence2;
-		this.invoker2 = invoker2;
-		if (this.invoker0 == this.invoker1 || this.invoker0 == this.invoker2 || this.invoker1 == this.invoker2) {
+		this.actuator2 = actuator2;
+		if (this.actuator0 == this.actuator1 || this.actuator0 == this.actuator2 || this.actuator1 == this.actuator2) {
 			this.forbids = 1;
 		} else {
 			this.forbids = 2;
@@ -47,7 +49,7 @@ public class WrapperTask3 extends AbstractWrapperTask {
 	}
 
 	@Override
-	public boolean isAdvance(WrapperTask other) {
+	public boolean isAdvance(Interceptor other) {
 		switch (other.size()) {
 			case 1 -> {
 				WrapperTask1 node = (WrapperTask1) other;
@@ -80,21 +82,22 @@ public class WrapperTask3 extends AbstractWrapperTask {
 	}
 
 	@Override
-	public void weakUp() {
-		if (this.invoker0 == this.invoker1) {
-			if (this.invoker0 == this.invoker2) {
-				invoker0.weakUp();
+	public void wakeup() {
+		if (this.actuator0 == this.actuator1) {
+			if (this.actuator0 == this.actuator2) {
+				actuator0.release(this);
 			} else {
-				invoker0.weakUp();
-				invoker2.weakUp();
+				actuator0.release(this);
+				actuator2.release(this);
 			}
-		} if (this.invoker0 == this.invoker2 || this.invoker1 == this.invoker2) {
-			invoker0.weakUp();
-			invoker1.weakUp();
+		}
+		if (this.actuator0 == this.actuator2 || this.actuator1 == this.actuator2) {
+			actuator0.release(this);
+			actuator1.release(this);
 		} else {
-			invoker0.weakUp();
-			invoker1.weakUp();
-			invoker2.weakUp();
+			actuator0.release(this);
+			actuator1.release(this);
+			actuator2.release(this);
 		}
 	}
 }

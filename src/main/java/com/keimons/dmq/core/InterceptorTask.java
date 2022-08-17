@@ -1,7 +1,4 @@
-package com.keimons.dmq.internal;
-
-import com.keimons.dmq.core.Interceptor;
-import com.keimons.dmq.core.Wrapper;
+package com.keimons.dmq.core;
 
 /**
  * 可运行的拦截器
@@ -36,7 +33,7 @@ import com.keimons.dmq.core.Wrapper;
  * @version 1.0
  * @since 17
  */
-public interface WrapperTask extends Interceptor, Wrapper<Runnable> {
+public interface InterceptorTask extends Interceptor {
 
 	/**
 	 * 返回任务屏障的数量
@@ -56,12 +53,12 @@ public interface WrapperTask extends Interceptor, Wrapper<Runnable> {
 	 * @param other 尝试越过此节点的其它节点
 	 * @return {@code true}允许越过当前节点重排序运行，{@code false}禁止越过当前节点重排序运行。
 	 */
-	boolean isAdvance(WrapperTask other);
+	boolean isAdvance(Interceptor other);
 
 	/**
 	 * 唤醒任务
 	 */
-	void weakUp();
+	void wakeup();
 
 	/**
 	 * 装载任务

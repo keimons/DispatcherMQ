@@ -15,7 +15,7 @@ import java.util.EnumMap;
  */
 public class Dispatchers {
 
-	private static final EnumMap<Type, Handler<Wrapper<Runnable>>> DEFAULT_HANDLER_DIRECT = new EnumMap<>(Type.class);
+	private static final EnumMap<Type, Handler<Runnable>> DEFAULT_HANDLER_DIRECT = new EnumMap<>(Type.class);
 
 	static {
 		DEFAULT_HANDLER_DIRECT.put(Type.DEFAULT, Handlers.newDirectHandler());
@@ -33,7 +33,7 @@ public class Dispatchers {
 	 */
 	public static Dispatcher<Runnable> newDispatcher(int nThreads) {
 		return new DefaultCompositeHandler<>(nThreads, 0, nThreads,
-				SerialMode.PRODUCER, DEFAULT_HANDLER_DIRECT);
+				SerialMode.PRODUCER, /*DefaultActuator::new, */DEFAULT_HANDLER_DIRECT);
 	}
 
 	/**
@@ -45,7 +45,7 @@ public class Dispatchers {
 	 * @return 带有任务调度功能的复合执行器
 	 */
 	public static <E extends Enum<E>> CompositeHandler<E> newCompositeHandler(
-			int nThreads, EnumMap<E, Handler<Wrapper<Runnable>>> handlers) {
+			int nThreads, EnumMap<E, Handler<Runnable>> handlers) {
 		return new DefaultCompositeHandler<>(nThreads, 0, nThreads, SerialMode.PRODUCER, handlers);
 	}
 

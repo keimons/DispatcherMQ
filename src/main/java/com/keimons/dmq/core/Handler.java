@@ -9,5 +9,5 @@ package com.keimons.dmq.core;
  */
 public interface Handler<T> {
 
-	void handle(T wrapperTask);
+	void handle(Wrapper<T> wrapperTask);
 }

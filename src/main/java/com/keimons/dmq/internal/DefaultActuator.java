@@ -1,5 +1,8 @@
 package com.keimons.dmq.internal;
 
+import com.keimons.dmq.core.Actuator;
+import com.keimons.dmq.core.InterceptorTask;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -7,36 +10,37 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 
 /**
- * Invoker
+ * 执行器
  *
  * @author houyn[monkey@keimons.com]
  * @version 1.0
  * @since 17
  */
-public class Invoker implements Runnable {
+public class DefaultActuator implements Actuator, Runnable {
 
-	BlockingDeque<WrapperTask> queue = new LinkedBlockingDeque<>();
+	BlockingDeque<InterceptorTask> queue = new LinkedBlockingDeque<>();
 
-	List<WrapperTask> fences = new LinkedList<>();
+	List<InterceptorTask> fences = new LinkedList<>();
 
 	Thread thread = new Thread(this);
 
 	Sync sync = new Sync(thread);
 
-	public void start() {
+	void DefaultActuator() {
 		thread.start();
 	}
 
-	public void offer(WrapperTask wrapperTask) {
-		queue.offer(wrapperTask);
+	@Override
+	public void actuate(InterceptorTask interceptorTask) {
+		queue.offer(interceptorTask);
+	}
+
+	@Override
+	public void release(InterceptorTask interceptorTask) {
 		sync.acquireWrite();
 	}
 
-	public void weakUp() {
-		sync.acquireWrite();
-	}
-
-	private boolean skip(WrapperTask wrapperTask) {
+	private boolean skip(InterceptorTask wrapperTask) {
 		// 判断任务是否可以越过所有屏障执行
 		for (int i = 0, length = fences.size(); i < length; i++) {
 			if (!wrapperTask.isAdvance(fences.get(i))) {
@@ -46,13 +50,13 @@ public class Invoker implements Runnable {
 		return true;
 	}
 
-	private WrapperTask next() {
-		WrapperTask wrapperTask = null;
+	private InterceptorTask next() {
+		InterceptorTask wrapperTask = null;
 		for (; ; ) {
 			Sync sync = this.sync;
 			int stamp = sync.acquireRead();
 			fences.removeIf(fence -> !fence.isIntercepted());
-			Iterator<WrapperTask> iterator = queue.iterator();
+			Iterator<InterceptorTask> iterator = queue.iterator();
 			while (iterator.hasNext()) {
 				wrapperTask = iterator.next();
 				if (skip(wrapperTask)) {
@@ -60,7 +64,7 @@ public class Invoker implements Runnable {
 					iterator.remove();
 					if (wrapperTask.tryIntercept()) {
 						fences.add(wrapperTask);
-						wrapperTask.weakUp();
+						wrapperTask.wakeup();
 					} else {
 						return wrapperTask;
 					}
@@ -75,7 +79,7 @@ public class Invoker implements Runnable {
 	@Override
 	public void run() {
 		for (; ; ) {
-			WrapperTask wrapperTask = next();
+			InterceptorTask wrapperTask = next();
 			wrapperTask.load();
 		}
 	}

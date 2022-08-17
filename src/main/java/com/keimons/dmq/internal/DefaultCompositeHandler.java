@@ -1,9 +1,9 @@
 package com.keimons.dmq.internal;
 
+import com.keimons.dmq.core.Actuator;
 import com.keimons.dmq.core.CompositeHandler;
 import com.keimons.dmq.core.Dispatcher;
 import com.keimons.dmq.core.Handler;
-import com.keimons.dmq.core.Wrapper;
 import com.keimons.dmq.utils.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -31,9 +31,9 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 
 	private final int nThreads;
 
-	private final Handler<Wrapper<Runnable>>[] handlers;
+	private final Handler<Runnable>[] handlers;
 
-	private final Invoker[] invokers;
+	private final Actuator[] actuators;
 
 	private final Lock main = new ReentrantLock();
 
@@ -50,39 +50,38 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	 * @param handlers 复合执行器
 	 */
 	public DefaultCompositeHandler(int nThreads, int start, int end, SerialMode type,
-								   EnumMap<E, Handler<Wrapper<Runnable>>> handlers) {
+								   EnumMap<E, Handler<Runnable>> handlers) {
 		// 0 <= start < end <= nThread
 		if (!(0 <= start && start < end && end <= nThreads) || handlers == null || handlers.size() < 1) {
 			throw new IllegalArgumentException();
 		}
 		OptionalInt max = handlers.keySet().stream().mapToInt(Enum::ordinal).max();
 		this.nThreads = nThreads;
-		this.invokers = new Invoker[nThreads];
+		this.actuators = ArrayUtils.newInstance(Actuator.class, nThreads);
 		this.handlers = ArrayUtils.newInstance(Handler.class, max.getAsInt() + 1);
-		IntStream.range(start, end).forEach(index -> invokers[index] = new Invoker());
-		IntStream.range(start, end).forEach(index -> invokers[index].start());
+		IntStream.range(start, end).forEach(index -> actuators[index] = new DefaultActuator());
 		handlers.forEach((key, value) -> this.handlers[key.ordinal()] = value);
 	}
 
 	protected void dispatch(int type, Runnable task, Object fence) {
-		Invoker invoker = invokers[fence.hashCode() % nThreads];
-		Handler<Wrapper<Runnable>> handler = handlers[type];
-		var wrapperTask = new WrapperTask1(handler, task, fence, invoker);
-		invoker.offer(wrapperTask);
+		Actuator actuator = actuators[fence.hashCode() % nThreads];
+		Handler<Runnable> handler = handlers[type];
+		var wrapperTask = new WrapperTask1(handler, task, fence, actuator);
+		actuator.actuate(wrapperTask);
 	}
 
 	protected void dispatch(int type, Runnable task, Object fence0, Object fence1) {
-		Invoker invoker0 = invokers[fence0.hashCode() % nThreads];
-		Invoker invoker1 = invokers[fence1.hashCode() % nThreads];
-		Handler<Wrapper<Runnable>> handler = handlers[type];
-		var wrapperTask = new WrapperTask2(handler, task, fence0, fence1, invoker0, invoker1);
-		if (invoker0 == invoker1) {
-			invoker0.offer(wrapperTask);
+		Actuator actuator0 = actuators[fence0.hashCode() % nThreads];
+		Actuator actuator1 = actuators[fence1.hashCode() % nThreads];
+		Handler<Runnable> handler = handlers[type];
+		var wrapperTask = new WrapperTask2(handler, task, fence0, fence1, actuator0, actuator1);
+		if (actuator0 == actuator1) {
+			actuator0.actuate(wrapperTask);
 		} else {
 			main.lock();
 			try {
-				invoker0.offer(wrapperTask);
-				invoker1.offer(wrapperTask);
+				actuator0.actuate(wrapperTask);
+				actuator1.actuate(wrapperTask);
 			} finally {
 				main.unlock();
 			}
@@ -90,37 +89,37 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	}
 
 	protected void dispatch(int type, Runnable task, Object fence0, Object fence1, Object fence2) {
-		Invoker invoker0 = invokers[fence0.hashCode() % nThreads];
-		Invoker invoker1 = invokers[fence1.hashCode() % nThreads];
-		Invoker invoker2 = invokers[fence2.hashCode() % nThreads];
-		Handler<Wrapper<Runnable>> handler = handlers[type];
-		var wrapperTask = new WrapperTask3(handler, task, fence0, invoker0, fence1, invoker1, fence2, invoker2);
-		if (invoker0 == invoker1) {
-			if (invoker0 == invoker2) {
-				invoker0.offer(wrapperTask);
+		Actuator actuator0 = actuators[fence0.hashCode() % nThreads];
+		Actuator actuator1 = actuators[fence1.hashCode() % nThreads];
+		Actuator actuator2 = actuators[fence2.hashCode() % nThreads];
+		Handler<Runnable> handler = handlers[type];
+		var wrapperTask = new WrapperTask3(handler, task, fence0, actuator0, fence1, actuator1, fence2, actuator2);
+		if (actuator0 == actuator1) {
+			if (actuator0 == actuator2) {
+				actuator0.actuate(wrapperTask);
 			} else {
 				main.lock();
 				try {
-					invoker0.offer(wrapperTask);
-					invoker2.offer(wrapperTask);
+					actuator0.actuate(wrapperTask);
+					actuator2.actuate(wrapperTask);
 				} finally {
 					main.unlock();
 				}
 			}
-		} else if (invoker0 == invoker2 || invoker1 == invoker2) {
+		} else if (actuator0 == actuator2 || actuator1 == actuator2) {
 			main.lock();
 			try {
-				invoker0.offer(wrapperTask);
-				invoker1.offer(wrapperTask);
+				actuator0.actuate(wrapperTask);
+				actuator1.actuate(wrapperTask);
 			} finally {
 				main.unlock();
 			}
 		} else {
 			main.lock();
 			try {
-				invoker0.offer(wrapperTask);
-				invoker1.offer(wrapperTask);
-				invoker2.offer(wrapperTask);
+				actuator0.actuate(wrapperTask);
+				actuator1.actuate(wrapperTask);
+				actuator2.actuate(wrapperTask);
 			} finally {
 				main.unlock();
 			}
@@ -133,17 +132,18 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 			case 2 -> dispatch(type, task, fences[0], fences[1]);
 			case 3 -> dispatch(type, task, fences[0], fences[1], fences[2]);
 			default -> {
-				Stream<Invoker> stream = Stream.of(fences).map(o -> invokers[o.hashCode() % nThreads]).distinct();
-				Invoker[] invokers = stream.toArray(Invoker[]::new);
-				Handler<Wrapper<Runnable>> handler = handlers[type];
-				var wrapperTask = new WrapperTaskX(handler, task, fences, invokers);
-				if (invokers.length <= 1) {
-					invokers[0].offer(wrapperTask);
+				Stream<Actuator> stream =
+						Stream.of(fences).map(o -> this.actuators[o.hashCode() % nThreads]).distinct();
+				Actuator[] actuators = stream.toArray(Actuator[]::new);
+				Handler handler = handlers[type];
+				var wrapperTask = new WrapperTaskX(handler, task, fences, actuators);
+				if (actuators.length <= 1) {
+					actuators[0].actuate(wrapperTask);
 				} else {
 					main.lock();
 					try {
-						for (Invoker invoker : invokers) {
-							invoker.offer(wrapperTask);
+						for (Actuator actuator : actuators) {
+							actuator.actuate(wrapperTask);
 						}
 					} finally {
 						main.unlock();

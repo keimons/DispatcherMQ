@@ -1,7 +1,8 @@
 package com.keimons.dmq.internal;
 
+import com.keimons.dmq.core.Actuator;
 import com.keimons.dmq.core.Handler;
-import com.keimons.dmq.core.Wrapper;
+import com.keimons.dmq.core.Interceptor;
 
 /**
  * 带有n个执行屏障的任务
@@ -17,13 +18,13 @@ public class WrapperTaskX extends AbstractWrapperTask {
 	 */
 	final Object[] fences;
 
-	final Invoker[] invokers;
+	final Actuator[] actuators;
 
-	public WrapperTaskX(Handler<Wrapper<Runnable>> handler, Runnable task, Object[] fences, Invoker[] invokers) {
+	public WrapperTaskX(Handler<Runnable> handler, Runnable task, Object[] fences, Actuator[] actuators) {
 		super(handler, task, fences.length);
 		this.fences = fences;
-		this.invokers = invokers;
-		this.forbids = invokers.length - 1;
+		this.actuators = actuators;
+		this.forbids = actuators.length - 1;
 	}
 
 	@Override
@@ -38,9 +39,9 @@ public class WrapperTaskX extends AbstractWrapperTask {
 	 * @return {@code true}可以越过当前栅栏，{@code false}不能越过当前栅栏
 	 */
 	@Override
-	public boolean isAdvance(WrapperTask other) {
+	public boolean isAdvance(Interceptor other) {
 		switch (other.size()) {
-			case 1 ->{
+			case 1 -> {
 				WrapperTask1 node = (WrapperTask1) other;
 				Object _fence = node.fence;
 				for (int i = 0; i < size; i++) {
@@ -92,9 +93,9 @@ public class WrapperTaskX extends AbstractWrapperTask {
 	}
 
 	@Override
-	public void weakUp() {
-		for (Invoker invoker : invokers) {
-			invoker.weakUp();
+	public void wakeup() {
+		for (Actuator actuator : actuators) {
+			actuator.release(this);
 		}
 	}
 }

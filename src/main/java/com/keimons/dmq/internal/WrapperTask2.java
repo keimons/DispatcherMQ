@@ -1,7 +1,8 @@
 package com.keimons.dmq.internal;
 
+import com.keimons.dmq.core.Actuator;
 import com.keimons.dmq.core.Handler;
-import com.keimons.dmq.core.Wrapper;
+import com.keimons.dmq.core.Interceptor;
 
 /**
  * 带有2个执行屏障的任务
@@ -16,18 +17,18 @@ public class WrapperTask2 extends AbstractWrapperTask {
 
 	final Object fence1;
 
-	final Invoker invoker0;
+	final Actuator actuator0;
 
-	final Invoker invoker1;
+	final Actuator actuator1;
 
-	public WrapperTask2(Handler<Wrapper<Runnable>> handler, Runnable task, Object fence0, Object fence1,
-						Invoker invoker0, Invoker invoker1) {
+	public WrapperTask2(Handler<Runnable> handler, Runnable task, Object fence0, Object fence1,
+						Actuator actuator0, Actuator actuator1) {
 		super(handler, task, 2);
 		this.fence0 = fence0;
 		this.fence1 = fence1;
-		this.forbids = invoker0 == invoker1 ? 0 : 1;
-		this.invoker0 = invoker0;
-		this.invoker1 = invoker1;
+		this.forbids = actuator0 == actuator1 ? 0 : 1;
+		this.actuator0 = actuator0;
+		this.actuator1 = actuator1;
 	}
 
 	@Override
@@ -36,7 +37,7 @@ public class WrapperTask2 extends AbstractWrapperTask {
 	}
 
 	@Override
-	public boolean isAdvance(WrapperTask other) {
+	public boolean isAdvance(Interceptor other) {
 		switch (other.size()) {
 			case 1 -> {
 				WrapperTask1 node = (WrapperTask1) other;
@@ -67,12 +68,12 @@ public class WrapperTask2 extends AbstractWrapperTask {
 	}
 
 	@Override
-	public void weakUp() {
-		if (invoker0 == invoker1) {
-			invoker0.weakUp();
+	public void wakeup() {
+		if (actuator0 == actuator1) {
+			actuator0.release(this);
 		} else {
-			invoker0.weakUp();
-			invoker1.weakUp();
+			actuator0.release(this);
+			actuator1.release(this);
 		}
 	}
 }

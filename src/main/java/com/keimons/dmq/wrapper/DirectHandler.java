@@ -10,7 +10,7 @@ import com.keimons.dmq.core.Wrapper;
  * @version 1.0
  * @since 17
  */
-public class DirectHandler implements Handler<Wrapper<Runnable>> {
+public class DirectHandler implements Handler<Runnable> {
 
 	@Override
 	public void handle(Wrapper<Runnable> wrapperTask) {

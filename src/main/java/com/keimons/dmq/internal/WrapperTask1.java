@@ -1,7 +1,8 @@
 package com.keimons.dmq.internal;
 
+import com.keimons.dmq.core.Actuator;
 import com.keimons.dmq.core.Handler;
-import com.keimons.dmq.core.Wrapper;
+import com.keimons.dmq.core.Interceptor;
 
 /**
  * 带有1个执行屏障的任务
@@ -14,12 +15,13 @@ public class WrapperTask1 extends AbstractWrapperTask {
 
 	final Object fence;
 
-	final Invoker invoker;
+	final Actuator actuator;
 
-	public WrapperTask1(Handler<Wrapper<Runnable>> handler, Runnable task, Object fence, Invoker invoker) {
+	public WrapperTask1(Handler<Runnable> handler, Runnable task, Object fence,
+						Actuator actuator) {
 		super(handler, task, 1);
 		this.fence = fence;
-		this.invoker = invoker;
+		this.actuator = actuator;
 	}
 
 	@Override
@@ -28,7 +30,7 @@ public class WrapperTask1 extends AbstractWrapperTask {
 	}
 
 	@Override
-	public boolean isAdvance(WrapperTask other) {
+	public boolean isAdvance(Interceptor other) {
 		switch (other.size()) {
 			case 1 -> {
 				WrapperTask1 node = (WrapperTask1) other;
@@ -56,7 +58,7 @@ public class WrapperTask1 extends AbstractWrapperTask {
 	}
 
 	@Override
-	public void weakUp() {
-		invoker.weakUp();
+	public void wakeup() {
+		actuator.release(this);
 	}
 }

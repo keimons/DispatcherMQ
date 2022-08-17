@@ -1,6 +1,7 @@
 package com.keimons.dmq.wrapper;
 
 import com.keimons.dmq.core.Handler;
+import com.keimons.dmq.core.Wrapper;
 
 /**
  * 处理器拒绝
@@ -17,5 +18,5 @@ public interface RejectedHandler<T> {
 	 * @param wrapperTask 包装任务
 	 * @param executor
 	 */
-	void rejectedHandle(T wrapperTask, Handler<T> executor);
+	void rejectedHandle(Wrapper<T> wrapperTask, Handler<T> executor);
 }

@@ -14,7 +14,7 @@ import java.util.concurrent.*;
  * @version 1.0
  * @since 17
  */
-class ThreadPoolHandler extends ThreadPoolExecutor implements Handler<Wrapper<Runnable>> {
+class ThreadPoolHandler extends ThreadPoolExecutor implements Handler<Runnable> {
 
 	private static final RejectedExecutionHandler defaultHandler = new AdaptPolicy(new AbortPolicy());
 
@@ -35,19 +35,19 @@ class ThreadPoolHandler extends ThreadPoolExecutor implements Handler<Wrapper<Ru
 	}
 
 	public ThreadPoolHandler(int corePoolSize, int maximumPoolSize, long keepAliveTime, @NotNull TimeUnit unit,
-							 @NotNull RejectedHandler<Wrapper<Runnable>> handler) {
+							 @NotNull RejectedHandler<Runnable> handler) {
 		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, new LinkedBlockingQueue<>(),
 				new AdaptPolicy(handler));
 	}
 
 	public ThreadPoolHandler(int corePoolSize, int maximumPoolSize, long keepAliveTime, @NotNull TimeUnit unit,
 							 @NotNull ThreadFactory threadFactory,
-							 @NotNull RejectedHandler<Wrapper<Runnable>> handler) {
+							 @NotNull RejectedHandler<Runnable> handler) {
 		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, new LinkedBlockingQueue<>(), threadFactory,
 				new AdaptPolicy(handler));
 	}
 
-	public void setRejectedHandler(@NotNull RejectedHandler<Wrapper<Runnable>> handler) {
+	public void setRejectedHandler(@NotNull RejectedHandler<Runnable> handler) {
 		super.setRejectedExecutionHandler(new AdaptPolicy(handler));
 	}
 
@@ -71,9 +71,9 @@ class ThreadPoolHandler extends ThreadPoolExecutor implements Handler<Wrapper<Ru
 
 	public static class AdaptPolicy implements RejectedExecutionHandler {
 
-		private final RejectedHandler<Wrapper<Runnable>> handler;
+		private final RejectedHandler<Runnable> handler;
 
-		public AdaptPolicy(RejectedHandler<Wrapper<Runnable>> handler) {
+		public AdaptPolicy(RejectedHandler<Runnable> handler) {
 			Objects.requireNonNull(handler);
 			this.handler = handler;
 		}
@@ -84,18 +84,18 @@ class ThreadPoolHandler extends ThreadPoolExecutor implements Handler<Wrapper<Ru
 		}
 	}
 
-	public static class AbortPolicy implements RejectedHandler<Wrapper<Runnable>> {
+	public static class AbortPolicy implements RejectedHandler<Runnable> {
 
 		@Override
-		public void rejectedHandle(Wrapper<Runnable> wrapperTask, Handler<Wrapper<Runnable>> executor) {
+		public void rejectedHandle(Wrapper<Runnable> wrapperTask, Handler<Runnable> executor) {
 			wrapperTask.cancel();
 			throw new RejectedExecutionException("Task " + wrapperTask + " rejected from " + executor.toString());
 		}
 	}
 
-	public static class DiscardPolicy implements RejectedHandler<Wrapper<Runnable>> {
+	public static class DiscardPolicy implements RejectedHandler<Runnable> {
 
-		public void rejectedHandle(Wrapper<Runnable> wrapperTask, Handler<Wrapper<Runnable>> executor) {
+		public void rejectedHandle(Wrapper<Runnable> wrapperTask, Handler<Runnable> executor) {
 			wrapperTask.cancel();
 		}
 	}

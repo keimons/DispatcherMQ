@@ -1,6 +1,8 @@
 package com.keimons.dmq.internal;
 
 import com.keimons.dmq.core.Handler;
+import com.keimons.dmq.core.Interceptor;
+import com.keimons.dmq.core.InterceptorTask;
 import com.keimons.dmq.core.Wrapper;
 import com.keimons.dmq.utils.MiscUtils;
 import jdk.internal.vm.annotation.Contended;
@@ -14,13 +16,13 @@ import java.lang.invoke.VarHandle;
  * @version 1.0
  * @since 17
  */
-public abstract class AbstractWrapperTask implements WrapperTask {
+public abstract class AbstractWrapperTask implements InterceptorTask, Wrapper<Runnable> {
 
 	protected static final VarHandle VV = MiscUtils.findVarHandle(
 			AbstractWrapperTask.class, "forbids", int.class
 	);
 
-	protected final Handler<Wrapper<Runnable>> handler;
+	protected final Handler<Runnable> handler;
 
 	/**
 	 * 等待执行的任务
@@ -43,7 +45,7 @@ public abstract class AbstractWrapperTask implements WrapperTask {
 	 */
 	protected volatile boolean intercepted = true;
 
-	protected AbstractWrapperTask(Handler<Wrapper<Runnable>> handler, Runnable task, int size) {
+	protected AbstractWrapperTask(Handler<Runnable> handler, Runnable task, int size) {
 		this.handler = handler;
 		this.task = task;
 		this.size = size;
@@ -64,7 +66,7 @@ public abstract class AbstractWrapperTask implements WrapperTask {
 	}
 
 	/**
-	 * {@inheritDoc}
+	 * {@inheritDoc} 唤醒
 	 *
 	 * @return {@inheritDoc}
 	 */
@@ -73,7 +75,7 @@ public abstract class AbstractWrapperTask implements WrapperTask {
 		return intercepted;
 	}
 
-	public abstract void weakUp();
+	public abstract void wakeup();
 
 	/**
 	 * 返回其它可执行的拦截器是否能越过当前的提前执行
@@ -84,7 +86,7 @@ public abstract class AbstractWrapperTask implements WrapperTask {
 	 * @param other 尝试越过此节点的其它节点
 	 * @return {@code true}允许越过当前节点重排序运行，{@code false}禁止越过当前节点重排序运行。
 	 */
-	public abstract boolean isAdvance(WrapperTask other);
+	public abstract boolean isAdvance(Interceptor other);
 
 	@Override
 	public void release() {
@@ -93,13 +95,14 @@ public abstract class AbstractWrapperTask implements WrapperTask {
 
 	@Override
 	public void invoke() {
+		handler.handle(this);
 		try {
 			// 执行真正的任务
 			this.task.run();
 		} finally {
 			// 必须确保：1. 拦截器释放；2. 关联线程唤醒。
 			this.release();
-			this.weakUp();
+			this.wakeup();
 		}
 	}
 
@@ -107,7 +110,7 @@ public abstract class AbstractWrapperTask implements WrapperTask {
 	public void cancel() {
 		// 必须确保：1. 拦截器释放；2. 关联线程唤醒。
 		this.release();
-		this.weakUp();
+		this.wakeup();
 	}
 
 	@Override

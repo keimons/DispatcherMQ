@@ -1,7 +1,6 @@
 package com.keimons.dmq.wrapper;
 
 import com.keimons.dmq.core.Handler;
-import com.keimons.dmq.core.Wrapper;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
@@ -15,26 +14,26 @@ import java.util.concurrent.TimeUnit;
  */
 public class Handlers {
 
-	public static Handler<Wrapper<Runnable>> newDirectHandler() {
+	public static Handler<Runnable> newDirectHandler() {
 		return new DirectHandler();
 	}
 
-	public static Handler<Wrapper<Runnable>> newFixedThreadHandler(int nThreads) {
+	public static Handler<Runnable> newFixedThreadHandler(int nThreads) {
 		return new ThreadPoolHandler(nThreads, nThreads);
 	}
 
-	public static Handler<Wrapper<Runnable>> newFixedThreadHandler(
-			int nThreads, @NotNull RejectedHandler<Wrapper<Runnable>> handler) {
+	public static Handler<Runnable> newFixedThreadHandler(
+			int nThreads, @NotNull RejectedHandler<Runnable> handler) {
 		return new ThreadPoolHandler(nThreads, nThreads, 0, TimeUnit.MILLISECONDS, handler);
 	}
 
-	public static Handler<Wrapper<Runnable>> newCachedThreadHandler(int corePoolSize, int maximumPoolSize) {
+	public static Handler<Runnable> newCachedThreadHandler(int corePoolSize, int maximumPoolSize) {
 		return new ThreadPoolHandler(corePoolSize, maximumPoolSize, 60, TimeUnit.SECONDS);
 	}
 
-	public static Handler<Wrapper<Runnable>> newCachedThreadHandler(
+	public static Handler<Runnable> newCachedThreadHandler(
 			int corePoolSize, int maximumPoolSize, long keepAliveTime, @NotNull TimeUnit unit,
-			@NotNull RejectedHandler<Wrapper<Runnable>> handler) {
+			@NotNull RejectedHandler<Runnable> handler) {
 		return new ThreadPoolHandler(corePoolSize, maximumPoolSize, keepAliveTime, unit, handler);
 	}
 }
