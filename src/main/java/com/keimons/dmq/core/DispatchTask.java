@@ -1,14 +1,15 @@
 package com.keimons.dmq.core;
 
+import org.jetbrains.annotations.ApiStatus;
+
 /**
  * 可运行的拦截器
  * <p>
  * 它包含了任务相关的所有信息，根据这些信息，可以对任务的执行做一些小手脚。这些任务信息包含：
  * <ol>
- *     <li>任务唯一序列，任务被添加到事件总线时，会被分配一个唯一ID；</li>
  *     <li>任务；</li>
  *     <li>任务执行屏障（可能有多个）；</li>
- *     <li>任务执行线程（可能有多个）；</li>
+ *     <li>任务执行器（可能有多个）；</li>
  *     <li>拦截器信息。</li>
  * </ol>
  * 在多线程环境下，它有可能会被多个工作线程持有，持有的形式包括：
@@ -33,27 +34,23 @@ package com.keimons.dmq.core;
  * @version 1.0
  * @since 17
  */
-public interface InterceptorTask extends Interceptor {
+@ApiStatus.Experimental
+public interface DispatchTask extends Interceptor {
 
 	/**
-	 * 返回任务屏障的数量
-	 * <p>
-	 * Explorer的任务执行时，需要一个任务屏障，这个方法返回任务屏障数量。
+	 * 判断是否依赖另一个任务
 	 *
-	 * @return 任务屏障的数量
+	 * @param task 要判断是否依赖的任务
+	 * @return {@code true}依赖这个任务
 	 */
-	int size();
+	boolean dependsOn(DispatchTask task);
 
 	/**
-	 * 返回其它可执行的拦截器是否能越过当前的提前执行
+	 * 投递任务
 	 * <p>
-	 * 设计语言：
-	 * 如果任务屏障完全不同，则可以重排序执行，这对最终的结果不会产生影响。
-	 *
-	 * @param other 尝试越过此节点的其它节点
-	 * @return {@code true}允许越过当前节点重排序运行，{@code false}禁止越过当前节点重排序运行。
+	 * 将任务投递至任务处理器，并在将来的合适的时机执行。
 	 */
-	boolean isAdvance(Interceptor other);
+	void deliver();
 
 	/**
 	 * 唤醒任务
@@ -61,9 +58,35 @@ public interface InterceptorTask extends Interceptor {
 	void wakeup();
 
 	/**
-	 * 装载任务
-	 * <p>
-	 * 将任务装载至任务处理器，并在将来的合适的时机执行。
+	 * 判断是否依赖另一个屏障
+	 *
+	 * @param fence 要判断是否依赖的屏障
+	 * @return {@code true}依赖这个任务
 	 */
-	void load();
+	boolean dependsOn(Object fence);
+
+	default boolean dependsOn(Object fence0, Object fence1) {
+		return dependsOn(fence0) || dependsOn(fence1);
+	}
+
+	default boolean dependsOn(Object fence0, Object fence1, Object fence2) {
+		return dependsOn(fence0) || dependsOn(fence1) || dependsOn(fence2);
+	}
+
+	default boolean dependsOn(Object fence0, Object fence1, Object fence2, Object fence3) {
+		return dependsOn(fence0) || dependsOn(fence1) || dependsOn(fence2) || dependsOn(fence3);
+	}
+
+	default boolean dependsOn(Object fence0, Object fence1, Object fence2, Object fence3, Object fence4) {
+		return dependsOn(fence0) || dependsOn(fence1) || dependsOn(fence2) || dependsOn(fence3) || dependsOn(fence4);
+	}
+
+	default boolean dependsOn(Object... fences) {
+		for (Object fence : fences) {
+			if (dependsOn(fence)) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

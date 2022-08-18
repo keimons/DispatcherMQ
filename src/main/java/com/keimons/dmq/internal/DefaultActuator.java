@@ -1,8 +1,9 @@
 package com.keimons.dmq.internal;
 
 import com.keimons.dmq.core.Actuator;
-import com.keimons.dmq.core.InterceptorTask;
+import com.keimons.dmq.core.DispatchTask;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,59 +19,62 @@ import java.util.concurrent.LinkedBlockingDeque;
  */
 public class DefaultActuator implements Actuator, Runnable {
 
-	BlockingDeque<InterceptorTask> queue = new LinkedBlockingDeque<>();
+	BlockingDeque<DispatchTask> queue = new LinkedBlockingDeque<>();
 
-	List<InterceptorTask> fences = new LinkedList<>();
+	List<DispatchTask> fences = new LinkedList<>();
 
 	Thread thread = new Thread(this);
 
 	Sync sync = new Sync(thread);
 
-	void DefaultActuator() {
+	public DefaultActuator() {
 		thread.start();
 	}
 
 	@Override
-	public void actuate(InterceptorTask interceptorTask) {
-		queue.offer(interceptorTask);
-	}
-
-	@Override
-	public void release(InterceptorTask interceptorTask) {
+	public void actuate(DispatchTask task) {
+		queue.offer(task);
 		sync.acquireWrite();
 	}
 
-	private boolean skip(InterceptorTask wrapperTask) {
+	@Override
+	public void release(DispatchTask task) {
+		sync.acquireWrite();
+	}
+
+	private boolean isDeliver(DispatchTask task) {
 		// 判断任务是否可以越过所有屏障执行
 		for (int i = 0, length = fences.size(); i < length; i++) {
-			if (!wrapperTask.isAdvance(fences.get(i))) {
+			if (task.dependsOn(fences.get(i))) {
 				return false;
 			}
 		}
 		return true;
 	}
 
-	private InterceptorTask next() {
-		InterceptorTask wrapperTask = null;
+	private DispatchTask next() {
+		var array = new ArrayList<>();
+		array.remove(100);
+		DispatchTask task = null;
 		for (; ; ) {
 			Sync sync = this.sync;
 			int stamp = sync.acquireRead();
 			fences.removeIf(fence -> !fence.isIntercepted());
-			Iterator<InterceptorTask> iterator = queue.iterator();
+			Iterator<DispatchTask> iterator = queue.iterator();
 			while (iterator.hasNext()) {
-				wrapperTask = iterator.next();
-				if (skip(wrapperTask)) {
+				task = iterator.next();
+				if (isDeliver(task)) {
 					// 这个任务已经可以执行了，所以，从缓存的队列中移除任务
 					iterator.remove();
-					if (wrapperTask.tryIntercept()) {
-						fences.add(wrapperTask);
-						wrapperTask.wakeup();
+					if (task.tryIntercept()) {
+						fences.add(task);
+						task.wakeup();
 					} else {
-						return wrapperTask;
+						return task;
 					}
 				}
 			}
-			if (wrapperTask == null) {
+			if (task == null) {
 				sync.validate(stamp);
 			}
 		}
@@ -79,8 +83,15 @@ public class DefaultActuator implements Actuator, Runnable {
 	@Override
 	public void run() {
 		for (; ; ) {
-			InterceptorTask wrapperTask = next();
-			wrapperTask.load();
+			try {
+				DispatchTask task = next();
+				task.deliver();
+				if (task.isIntercepted()) {
+					fences.add(task);
+				}
+			} catch (Throwable e) {
+				e.printStackTrace();
+			}
 		}
 	}
 }

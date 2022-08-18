@@ -66,7 +66,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	protected void dispatch(int type, Runnable task, Object fence) {
 		Actuator actuator = actuators[fence.hashCode() % nThreads];
 		Handler<Runnable> handler = handlers[type];
-		var wrapperTask = new WrapperTask1(handler, task, fence, actuator);
+		var wrapperTask = new DispatchTask1(handler, task, fence, actuator);
 		actuator.actuate(wrapperTask);
 	}
 
@@ -74,7 +74,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		Actuator actuator0 = actuators[fence0.hashCode() % nThreads];
 		Actuator actuator1 = actuators[fence1.hashCode() % nThreads];
 		Handler<Runnable> handler = handlers[type];
-		var wrapperTask = new WrapperTask2(handler, task, fence0, fence1, actuator0, actuator1);
+		var wrapperTask = new DispatchTask2(handler, task, fence0, fence1, actuator0, actuator1);
 		if (actuator0 == actuator1) {
 			actuator0.actuate(wrapperTask);
 		} else {
@@ -92,8 +92,11 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		Actuator actuator0 = actuators[fence0.hashCode() % nThreads];
 		Actuator actuator1 = actuators[fence1.hashCode() % nThreads];
 		Actuator actuator2 = actuators[fence2.hashCode() % nThreads];
+		Stream<Actuator> stream = Stream.of(actuator0, actuator1, actuator2);
+		stream.distinct();
+		Integer.bitCount(100);
 		Handler<Runnable> handler = handlers[type];
-		var wrapperTask = new WrapperTask3(handler, task, fence0, actuator0, fence1, actuator1, fence2, actuator2);
+		var wrapperTask = new DispatchTask3(handler, task, fence0, actuator0, fence1, actuator1, fence2, actuator2);
 		if (actuator0 == actuator1) {
 			if (actuator0 == actuator2) {
 				actuator0.actuate(wrapperTask);
@@ -136,7 +139,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 						Stream.of(fences).map(o -> this.actuators[o.hashCode() % nThreads]).distinct();
 				Actuator[] actuators = stream.toArray(Actuator[]::new);
 				Handler handler = handlers[type];
-				var wrapperTask = new WrapperTaskX(handler, task, fences, actuators);
+				var wrapperTask = new DispatchTaskX(handler, task, fences, actuators);
 				if (actuators.length <= 1) {
 					actuators[0].actuate(wrapperTask);
 				} else {

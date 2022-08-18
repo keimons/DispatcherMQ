@@ -1,8 +1,7 @@
 package com.keimons.dmq.internal;
 
+import com.keimons.dmq.core.DispatchTask;
 import com.keimons.dmq.core.Handler;
-import com.keimons.dmq.core.Interceptor;
-import com.keimons.dmq.core.InterceptorTask;
 import com.keimons.dmq.core.Wrapper;
 import com.keimons.dmq.utils.MiscUtils;
 import jdk.internal.vm.annotation.Contended;
@@ -10,16 +9,16 @@ import jdk.internal.vm.annotation.Contended;
 import java.lang.invoke.VarHandle;
 
 /**
- * AbstractInterceptorTask
+ * 调度任务抽象类
  *
  * @author houyn[monkey@keimons.com]
  * @version 1.0
  * @since 17
  */
-public abstract class AbstractWrapperTask implements InterceptorTask, Wrapper<Runnable> {
+public abstract class AbstractDispatchTask implements DispatchTask, Wrapper<Runnable> {
 
 	protected static final VarHandle VV = MiscUtils.findVarHandle(
-			AbstractWrapperTask.class, "forbids", int.class
+			AbstractDispatchTask.class, "forbids", int.class
 	);
 
 	protected final Handler<Runnable> handler;
@@ -28,11 +27,6 @@ public abstract class AbstractWrapperTask implements InterceptorTask, Wrapper<Ru
 	 * 等待执行的任务
 	 */
 	protected final Runnable task;
-
-	/**
-	 * 任务执行屏障数量
-	 */
-	protected final int size;
 
 	/**
 	 * 剩余拦截量
@@ -45,15 +39,9 @@ public abstract class AbstractWrapperTask implements InterceptorTask, Wrapper<Ru
 	 */
 	protected volatile boolean intercepted = true;
 
-	protected AbstractWrapperTask(Handler<Runnable> handler, Runnable task, int size) {
+	protected AbstractDispatchTask(Handler<Runnable> handler, Runnable task) {
 		this.handler = handler;
 		this.task = task;
-		this.size = size;
-	}
-
-	@Override
-	public int size() {
-		return size;
 	}
 
 	@Override
@@ -75,19 +63,6 @@ public abstract class AbstractWrapperTask implements InterceptorTask, Wrapper<Ru
 		return intercepted;
 	}
 
-	public abstract void wakeup();
-
-	/**
-	 * 返回其它可执行的拦截器是否能越过当前的提前执行
-	 * <p>
-	 * 设计语言：
-	 * 如果任务屏障完全不同，则可以重排序执行，这对最终的结果不会产生影响。
-	 *
-	 * @param other 尝试越过此节点的其它节点
-	 * @return {@code true}允许越过当前节点重排序运行，{@code false}禁止越过当前节点重排序运行。
-	 */
-	public abstract boolean isAdvance(Interceptor other);
-
 	@Override
 	public void release() {
 		this.intercepted = false;
@@ -95,7 +70,6 @@ public abstract class AbstractWrapperTask implements InterceptorTask, Wrapper<Ru
 
 	@Override
 	public void invoke() {
-		handler.handle(this);
 		try {
 			// 执行真正的任务
 			this.task.run();
@@ -119,7 +93,7 @@ public abstract class AbstractWrapperTask implements InterceptorTask, Wrapper<Ru
 	}
 
 	@Override
-	public void load() {
+	public void deliver() {
 		handler.handle(this);
 	}
 }

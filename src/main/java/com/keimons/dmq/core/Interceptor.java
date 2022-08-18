@@ -77,36 +77,4 @@ public interface Interceptor {
 	 * 移除线程所持有的拦截器，拦截器的释放关乎缓存任务能否顺利执行。
 	 */
 	void release();
-
-	/**
-	 * 返回任务屏障的数量
-	 * <p>
-	 * Explorer的任务执行时，需要一个任务屏障，这个方法返回任务屏障数量。
-	 *
-	 * @return 任务屏障的数量
-	 */
-	int size();
-
-	/**
-	 * 返回其它可执行的拦截器是否能越过当前的提前执行
-	 * <p>
-	 * 设计语言：
-	 * 如果任务屏障完全不同，则可以重排序执行，这对最终的结果不会产生影响。
-	 *
-	 * @param other 尝试越过此节点的其它节点
-	 * @return {@code true}允许越过当前节点重排序运行，{@code false}禁止越过当前节点重排序运行。
-	 */
-	boolean isAdvance(Interceptor other);
-
-	/**
-	 * 唤醒任务
-	 */
-	void wakeup();
-
-	/**
-	 * 装载任务
-	 * <p>
-	 * 将任务装载至任务处理器，并在将来的合适的时机执行。
-	 */
-	void load();
 }
