@@ -1,5 +1,11 @@
 package com.keimons.dmq.internal;
 
+import com.keimons.dmq.core.Actuator;
+import com.keimons.dmq.core.DispatchTask;
+
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 /**
  * 串行模式
  * <p>
@@ -17,14 +23,16 @@ package com.keimons.dmq.internal;
  * @version 1.0
  * @since 17
  */
-public enum SerialMode {
+public class SerialMode {
 
 	/**
 	 * 完整版一致性
 	 * <p>
 	 * 先到先消费原则，能够提供针对于所有生产者而言的最强一致性。
 	 */
-	COMPLETE,
+	public static Serialization complete() {
+		return new CompleteSerial();
+	}
 
 	/**
 	 * 生产者一致性
@@ -32,5 +40,102 @@ public enum SerialMode {
 	 * 提供针对于单个生产者的先到先消费的强一致性。尽管这个实现并不能保证绝对的串行，
 	 * 但生产者一致性能提供更好的性能。
 	 */
-	PRODUCER,
+	public static Serialization producer() {
+		return new ProducerSerial(false);
+	}
+
+	private static class ProducerSerial implements Serialization {
+
+		protected final Lock main;
+
+		private ProducerSerial(boolean fair) {
+			this.main = new ReentrantLock(fair);
+		}
+
+
+		@Override
+		public void dispatch(DispatchTask dispatchTask, Actuator actuator) {
+			actuator.actuate(dispatchTask);
+		}
+
+		@Override
+		public void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1) {
+			main.lock();
+			try {
+				a0.actuate(dispatchTask);
+				a1.actuate(dispatchTask);
+			} finally {
+				main.unlock();
+			}
+		}
+
+		@Override
+		public void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1, Actuator a2) {
+			main.lock();
+			try {
+				a0.actuate(dispatchTask);
+				a1.actuate(dispatchTask);
+				a2.actuate(dispatchTask);
+			} finally {
+				main.unlock();
+			}
+		}
+
+		@Override
+		public void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1, Actuator a2, Actuator a3) {
+			main.lock();
+			try {
+				a0.actuate(dispatchTask);
+				a1.actuate(dispatchTask);
+				a2.actuate(dispatchTask);
+				a3.actuate(dispatchTask);
+			} finally {
+				main.unlock();
+			}
+		}
+
+		@Override
+		public void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1, Actuator a2, Actuator a3,
+							 Actuator a4) {
+			main.lock();
+			try {
+				a0.actuate(dispatchTask);
+				a1.actuate(dispatchTask);
+				a2.actuate(dispatchTask);
+				a3.actuate(dispatchTask);
+				a4.actuate(dispatchTask);
+			} finally {
+				main.unlock();
+			}
+		}
+
+		@Override
+		public void dispatch(DispatchTask dispatchTask, Actuator... actuators) {
+			main.lock();
+			try {
+				for (int i = 0; i < actuators.length; i++) {
+					actuators[i].actuate(dispatchTask);
+				}
+			} finally {
+				main.unlock();
+			}
+		}
+	}
+
+	private static class CompleteSerial extends ProducerSerial {
+
+		private CompleteSerial() {
+			super(true);
+		}
+
+		@Override
+		public void dispatch(DispatchTask dispatchTask, Actuator actuator) {
+			main.lock();
+			try {
+				actuator.actuate(dispatchTask);
+			} finally {
+				main.unlock();
+			}
+		}
+	}
 }

@@ -22,7 +22,8 @@ public class DirectHandlerTest {
 	public void test() throws InterruptedException {
 		EnumMap<Defaults.Type, Handler<Runnable>> map = new EnumMap<>(Defaults.Type.class);
 		map.put(Defaults.Type.Default, Handlers.newDirectHandler());
-		CompositeHandler<Defaults.Type> dispatcher = new DefaultCompositeHandler<>(4, 0, 4, SerialMode.PRODUCER, map);
+		CompositeHandler<Defaults.Type> dispatcher = new DefaultCompositeHandler<>(4, 0, 4, SerialMode.producer(),
+				map);
 		for (int i = 0; i < 10000; i++) {
 			final int index = i;
 			dispatcher.dispatch(Defaults.Type.Default, () -> System.out.println(index), 1);
@@ -34,7 +35,8 @@ public class DirectHandlerTest {
 	public void testOrder() throws InterruptedException {
 		EnumMap<Defaults.Type, Handler<Runnable>> map = new EnumMap<>(Defaults.Type.class);
 		map.put(Defaults.Type.Default, Handlers.newDirectHandler());
-		CompositeHandler<Defaults.Type> dispatcher = new DefaultCompositeHandler<>(4, 0, 4, SerialMode.PRODUCER, map);
+		CompositeHandler<Defaults.Type> dispatcher = new DefaultCompositeHandler<>(4, 0, 4, SerialMode.producer(),
+				map);
 		dispatcher.dispatch(Defaults.Type.Default, () -> {
 			try {
 				Thread.sleep(1000);

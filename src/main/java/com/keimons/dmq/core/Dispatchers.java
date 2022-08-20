@@ -33,7 +33,7 @@ public class Dispatchers {
 	 */
 	public static Dispatcher<Runnable> newDispatcher(int nThreads) {
 		return new DefaultCompositeHandler<>(nThreads, 0, nThreads,
-				SerialMode.PRODUCER, /*DefaultActuator::new, */DEFAULT_HANDLER_DIRECT);
+				SerialMode.producer(), /*DefaultActuator::new, */DEFAULT_HANDLER_DIRECT);
 	}
 
 	/**
@@ -46,7 +46,7 @@ public class Dispatchers {
 	 */
 	public static <E extends Enum<E>> CompositeHandler<E> newCompositeHandler(
 			int nThreads, EnumMap<E, Handler<Runnable>> handlers) {
-		return new DefaultCompositeHandler<>(nThreads, 0, nThreads, SerialMode.PRODUCER, handlers);
+		return new DefaultCompositeHandler<>(nThreads, 0, nThreads, SerialMode.producer(), handlers);
 	}
 
 	private enum Type {

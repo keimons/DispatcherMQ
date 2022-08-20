@@ -9,8 +9,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumMap;
 import java.util.OptionalInt;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -31,11 +29,11 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 
 	private final int nThreads;
 
+	private final Serialization serialization;
+
 	private final Handler<Runnable>[] handlers;
 
 	private final Actuator[] actuators;
-
-	private final Lock main = new ReentrantLock();
 
 	/**
 	 * 构造复合执行调度器
@@ -43,13 +41,13 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	 * 带有复合执行器的调度器不仅仅可以用于单机模式，还可以用于集群模式。
 	 * 参数满足：{@code 0 <= start < end <= nThread}。
 	 *
-	 * @param nThreads 总线程数量
-	 * @param start    当前调度器开始位置
-	 * @param end      当前调度器结束位置
-	 * @param type     排序类型
-	 * @param handlers 复合执行器
+	 * @param nThreads      总线程数量
+	 * @param start         当前调度器开始位置
+	 * @param end           当前调度器结束位置
+	 * @param serialization 排序类型
+	 * @param handlers      复合执行器
 	 */
-	public DefaultCompositeHandler(int nThreads, int start, int end, SerialMode type,
+	public DefaultCompositeHandler(int nThreads, int start, int end, Serialization serialization,
 								   EnumMap<E, Handler<Runnable>> handlers) {
 		// 0 <= start < end <= nThread
 		if (!(0 <= start && start < end && end <= nThreads) || handlers == null || handlers.size() < 1) {
@@ -57,6 +55,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		}
 		OptionalInt max = handlers.keySet().stream().mapToInt(Enum::ordinal).max();
 		this.nThreads = nThreads;
+		this.serialization = serialization;
 		this.actuators = ArrayUtils.newInstance(Actuator.class, nThreads);
 		this.handlers = ArrayUtils.newInstance(Handler.class, max.getAsInt() + 1);
 		IntStream.range(start, end).forEach(index -> actuators[index] = new DefaultActuator());
@@ -76,15 +75,9 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		Handler<Runnable> handler = handlers[type];
 		var wrapperTask = new DispatchTask2(handler, task, fence0, fence1, actuator0, actuator1);
 		if (actuator0 == actuator1) {
-			actuator0.actuate(wrapperTask);
+			serialization.dispatch(wrapperTask);
 		} else {
-			main.lock();
-			try {
-				actuator0.actuate(wrapperTask);
-				actuator1.actuate(wrapperTask);
-			} finally {
-				main.unlock();
-			}
+			serialization.dispatch(wrapperTask, actuator0, actuator1);
 		}
 	}
 
@@ -92,40 +85,18 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		Actuator actuator0 = actuators[fence0.hashCode() % nThreads];
 		Actuator actuator1 = actuators[fence1.hashCode() % nThreads];
 		Actuator actuator2 = actuators[fence2.hashCode() % nThreads];
-		Stream<Actuator> stream = Stream.of(actuator0, actuator1, actuator2);
-		stream.distinct();
-		Integer.bitCount(100);
 		Handler<Runnable> handler = handlers[type];
 		var wrapperTask = new DispatchTask3(handler, task, fence0, actuator0, fence1, actuator1, fence2, actuator2);
 		if (actuator0 == actuator1) {
 			if (actuator0 == actuator2) {
-				actuator0.actuate(wrapperTask);
+				serialization.dispatch(wrapperTask, actuator0);
 			} else {
-				main.lock();
-				try {
-					actuator0.actuate(wrapperTask);
-					actuator2.actuate(wrapperTask);
-				} finally {
-					main.unlock();
-				}
+				serialization.dispatch(wrapperTask, actuator0, actuator2);
 			}
 		} else if (actuator0 == actuator2 || actuator1 == actuator2) {
-			main.lock();
-			try {
-				actuator0.actuate(wrapperTask);
-				actuator1.actuate(wrapperTask);
-			} finally {
-				main.unlock();
-			}
+			serialization.dispatch(wrapperTask, actuator0, actuator1);
 		} else {
-			main.lock();
-			try {
-				actuator0.actuate(wrapperTask);
-				actuator1.actuate(wrapperTask);
-				actuator2.actuate(wrapperTask);
-			} finally {
-				main.unlock();
-			}
+			serialization.dispatch(wrapperTask, actuator0, actuator1, actuator2);
 		}
 	}
 
@@ -138,20 +109,9 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 				Stream<Actuator> stream =
 						Stream.of(fences).map(o -> this.actuators[o.hashCode() % nThreads]).distinct();
 				Actuator[] actuators = stream.toArray(Actuator[]::new);
-				Handler handler = handlers[type];
+				Handler<Runnable> handler = handlers[type];
 				var wrapperTask = new DispatchTaskX(handler, task, fences, actuators);
-				if (actuators.length <= 1) {
-					actuators[0].actuate(wrapperTask);
-				} else {
-					main.lock();
-					try {
-						for (Actuator actuator : actuators) {
-							actuator.actuate(wrapperTask);
-						}
-					} finally {
-						main.unlock();
-					}
-				}
+				serialization.dispatch(wrapperTask, actuators);
 			}
 		}
 	}

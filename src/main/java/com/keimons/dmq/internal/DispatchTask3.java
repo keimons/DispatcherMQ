@@ -36,6 +36,9 @@ public class DispatchTask3 extends AbstractDispatchTask {
 		this.actuator1 = actuator1;
 		this.fence2 = fence2;
 		this.actuator2 = actuator2;
+		if (this.actuator0 == this.actuator1 && this.actuator1 == this.actuator2) {
+			this.forbids = 0;
+		}
 		if (this.actuator0 == this.actuator1 || this.actuator0 == this.actuator2 || this.actuator1 == this.actuator2) {
 			this.forbids = 1;
 		} else {

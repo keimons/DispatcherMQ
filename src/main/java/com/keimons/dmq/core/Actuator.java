@@ -9,7 +9,7 @@ package com.keimons.dmq.core;
  */
 public interface Actuator {
 
-	void actuate(DispatchTask interceptorTask);
+	void actuate(DispatchTask dispatchTask);
 
-	void release(DispatchTask interceptorTask);
+	void release(DispatchTask dispatchTask);
 }

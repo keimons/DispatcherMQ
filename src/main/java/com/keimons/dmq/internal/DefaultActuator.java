@@ -3,7 +3,6 @@ package com.keimons.dmq.internal;
 import com.keimons.dmq.core.Actuator;
 import com.keimons.dmq.core.DispatchTask;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,13 +31,13 @@ public class DefaultActuator implements Actuator, Runnable {
 	}
 
 	@Override
-	public void actuate(DispatchTask task) {
-		queue.offer(task);
+	public void actuate(DispatchTask dispatchTask) {
+		queue.offer(dispatchTask);
 		sync.acquireWrite();
 	}
 
 	@Override
-	public void release(DispatchTask task) {
+	public void release(DispatchTask dispatchTask) {
 		sync.acquireWrite();
 	}
 
@@ -53,8 +52,6 @@ public class DefaultActuator implements Actuator, Runnable {
 	}
 
 	private DispatchTask next() {
-		var array = new ArrayList<>();
-		array.remove(100);
 		DispatchTask task = null;
 		for (; ; ) {
 			Sync sync = this.sync;
