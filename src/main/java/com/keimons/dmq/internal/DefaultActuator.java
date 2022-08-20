@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadFactory;
 
 /**
  * 执行器
@@ -22,12 +23,13 @@ public class DefaultActuator implements Actuator, Runnable {
 
 	List<DispatchTask> fences = new LinkedList<>();
 
-	Thread thread = new Thread(this);
+	Thread thread;
 
-	Sync sync = new Sync(thread);
+	Sync sync = new Sync();
 
-	public DefaultActuator() {
-		thread.start();
+	public DefaultActuator(ThreadFactory threadFactory) {
+		thread = threadFactory.newThread(this);
+		sync.setThread(thread);
 	}
 
 	@Override

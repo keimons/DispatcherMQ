@@ -1,10 +1,12 @@
 package com.keimons.dmq.core;
 
+import com.keimons.dmq.internal.DefaultActuator;
 import com.keimons.dmq.internal.DefaultCompositeHandler;
 import com.keimons.dmq.internal.SerialMode;
 import com.keimons.dmq.wrapper.Handlers;
 
 import java.util.EnumMap;
+import java.util.concurrent.Executors;
 
 /**
  * 调度器
@@ -33,7 +35,11 @@ public class Dispatchers {
 	 */
 	public static Dispatcher<Runnable> newDispatcher(int nThreads) {
 		return new DefaultCompositeHandler<>(nThreads, 0, nThreads,
-				SerialMode.producer(), /*DefaultActuator::new, */DEFAULT_HANDLER_DIRECT);
+				SerialMode.producer(),
+				Executors.defaultThreadFactory(),
+				DefaultActuator::new,
+				DEFAULT_HANDLER_DIRECT
+		);
 	}
 
 	/**
@@ -46,7 +52,9 @@ public class Dispatchers {
 	 */
 	public static <E extends Enum<E>> CompositeHandler<E> newCompositeHandler(
 			int nThreads, EnumMap<E, Handler<Runnable>> handlers) {
-		return new DefaultCompositeHandler<>(nThreads, 0, nThreads, SerialMode.producer(), handlers);
+		return new DefaultCompositeHandler<>(nThreads, 0, nThreads,
+				SerialMode.producer(), Executors.defaultThreadFactory(), DefaultActuator::new, handlers
+		);
 	}
 
 	private enum Type {

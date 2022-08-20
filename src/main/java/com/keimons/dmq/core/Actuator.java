@@ -1,7 +1,7 @@
 package com.keimons.dmq.core;
 
 /**
- * Actuator
+ * 执行单元
  *
  * @author houyn[monkey@keimons.com]
  * @version 1.0

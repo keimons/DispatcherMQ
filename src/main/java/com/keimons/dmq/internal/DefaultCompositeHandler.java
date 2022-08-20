@@ -1,14 +1,12 @@
 package com.keimons.dmq.internal;
 
-import com.keimons.dmq.core.Actuator;
-import com.keimons.dmq.core.CompositeHandler;
-import com.keimons.dmq.core.Dispatcher;
-import com.keimons.dmq.core.Handler;
+import com.keimons.dmq.core.*;
 import com.keimons.dmq.utils.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.EnumMap;
 import java.util.OptionalInt;
+import java.util.concurrent.ThreadFactory;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -48,6 +46,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	 * @param handlers      复合执行器
 	 */
 	public DefaultCompositeHandler(int nThreads, int start, int end, Serialization serialization,
+								   ThreadFactory threadFactory, ActuatorFactory actuatorFactory,
 								   EnumMap<E, Handler<Runnable>> handlers) {
 		// 0 <= start < end <= nThread
 		if (!(0 <= start && start < end && end <= nThreads) || handlers == null || handlers.size() < 1) {
@@ -58,7 +57,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		this.serialization = serialization;
 		this.actuators = ArrayUtils.newInstance(Actuator.class, nThreads);
 		this.handlers = ArrayUtils.newInstance(Handler.class, max.getAsInt() + 1);
-		IntStream.range(start, end).forEach(index -> actuators[index] = new DefaultActuator());
+		IntStream.range(start, end).forEach(index -> actuators[index] = actuatorFactory.newActuator(threadFactory));
 		handlers.forEach((key, value) -> this.handlers[key.ordinal()] = value);
 	}
 

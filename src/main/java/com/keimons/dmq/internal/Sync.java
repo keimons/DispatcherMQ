@@ -25,7 +25,7 @@ public class Sync implements OptimisticSynchronizer {
 	 * 同步器与线程是绑定的，{@link #acquireWrite()}，版本变更时，
 	 * 有可能需要唤醒等待中的线程。
 	 */
-	private final Thread thread;
+	private Thread thread;
 	/**
 	 * 版本控制
 	 * <p>
@@ -39,12 +39,7 @@ public class Sync implements OptimisticSynchronizer {
 	 */
 	private volatile boolean blocked;
 
-	/**
-	 * 构造绑定线程的同步器
-	 *
-	 * @param thread 绑定线程
-	 */
-	public Sync(Thread thread) {
+	public void setThread(Thread thread) {
 		this.thread = thread;
 	}
 
