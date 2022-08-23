@@ -19,6 +19,7 @@ public class Sync implements OptimisticSynchronizer {
 	private static final VarHandle VV = MiscUtils.findVarHandle(Sync.class, "stamp", int.class);
 
 	private static final VarHandle BB = MiscUtils.findVarHandle(Sync.class, "blocked", boolean.class);
+
 	/**
 	 * 绑定线程
 	 * <p>
@@ -26,12 +27,14 @@ public class Sync implements OptimisticSynchronizer {
 	 * 有可能需要唤醒等待中的线程。
 	 */
 	private Thread thread;
+
 	/**
 	 * 版本控制
 	 * <p>
 	 * 读取事件总线前和读取事件总线后，如果发生过版本的变更，则代表读取期间有新事件发布。
 	 */
 	private volatile int stamp;
+
 	/**
 	 * 状态控制
 	 * <p>

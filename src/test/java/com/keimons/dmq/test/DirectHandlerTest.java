@@ -2,10 +2,10 @@ package com.keimons.dmq.test;
 
 import com.keimons.dmq.core.CompositeHandler;
 import com.keimons.dmq.core.Handler;
+import com.keimons.dmq.handler.Handlers;
 import com.keimons.dmq.internal.DefaultActuator;
 import com.keimons.dmq.internal.DefaultCompositeHandler;
 import com.keimons.dmq.internal.SerialMode;
-import com.keimons.dmq.wrapper.Handlers;
 import org.junit.jupiter.api.Test;
 
 import java.util.EnumMap;

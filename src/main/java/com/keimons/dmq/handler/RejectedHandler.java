@@ -1,4 +1,4 @@
-package com.keimons.dmq.wrapper;
+package com.keimons.dmq.handler;
 
 import com.keimons.dmq.core.Handler;
 import com.keimons.dmq.core.Wrapper;

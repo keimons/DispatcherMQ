@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
  *     <li>带有相同执行屏障的任务，必须串行执行；</li>
  *     <li>带有不同执行屏障的任务，可以并行执行。</li>
  * </ul>
- * 执行屏障可以是任意对象，{@code userId} 、{@code itemId} 、{@code session}
+ * 执行屏障可以是任意对象，{@code "userId"} 、{@code "itemId"} 、{@code "session"}
  * 等等都可以作为执行屏障。以{@code userId} 为例：
  * <pre>{@code
  * Dispatcher<Runnable> dispatcher = ...;
@@ -26,7 +26,7 @@ import org.jetbrains.annotations.NotNull;
  * // print 3, 1, 4, 2
  * // print 1, 3, 4, 2
  * }</pre>
- * 来自{@code "user_10000001"}的任务和来自{@code "user_10000002"}的任务，
+ * 来自{@code "user_10000001"} 的任务和来自{@code "user_10000002"} 的任务，
  * 尽管是在交叉执行，但对于他们各自而言，执行顺序总是固定的。。
  * <p>
  * 任务还可以带有多个执行屏障。带有多个执行屏障的任务成为：<b>联合任务</b>。
@@ -43,30 +43,16 @@ import org.jetbrains.annotations.NotNull;
  * }</pre>
  * 可以看到以下规律：
  * <ol>
- *     <li><b>任务1</b>和<b>任务2</b>中的{@code "user_10000001"}相同，任务无法重排序执行；</li>
- *     <li><b>任务2</b>和<b>任务3</b>中的{@code "item_1002"}相同，任务无法重排序执行；</li>
- *     <li><b>任务3</b>和<b>任务4</b>中的{@code "user_10000002"}相同，任务无法重排序执行；</li>
+ *     <li><b>任务1</b>和<b>任务2</b>中的{@code "user_10000001"} 相同，任务无法重排序执行；</li>
+ *     <li><b>任务2</b>和<b>任务3</b>中的{@code "item_1002"} 相同，任务无法重排序执行；</li>
+ *     <li><b>任务3</b>和<b>任务4</b>中的{@code "user_10000002"} 相同，任务无法重排序执行；</li>
  *     <li><b>任务5</b>和<b>其它任务</b>无关，可以并行执行。</li>
  * </ol>
  * {@code 任务1，任务2，任务3，任务4} 总是顺序执行，而{@code 任务5} 可以却可以并行执行，所以，
  * 输出的{@code 5} 是穿插在{@code 1, 2, 3, 4} 之间。
  * <p>
- * <p>
- * 调度器负责调度任务。任务的执行可能是在调度器中直接完成，也可能调度到复合线线程池中完成。
- * <pre>{@code
- * Dispatcher dispatcher = ...
- * dispatcher.dispatch(() -> {}, "any");
- * }</pre>
- * 调度器如何调度任务，取决于实现具体的实现，可以在调度器中直接执行：
- * <pre>{@code
- * class DirectDispatcher implements Dispatcher<Runnable> {
- *
- *     @Override
- *     public void dispatch(Runnable runnable, Object fence) {
- *         task.run();
- *     }
- * }
- * }</pre>
+ * 任务调度器不仅仅可以对{@link Runnable 任务}进行调度，同样它也可以用于消息的调度。
+ * 任务的执行可能是在调度器中直接完成，也可能调度到复合线线程池中完成。
  * 如果想要实现任务调度，则至少应该有一组线程调度任务，调度任务的线程称为：<b>调度线程</b>。
  * 允许任务在调度线程直接执行，或派遣到其它线程（池）中执行。
  * <p>

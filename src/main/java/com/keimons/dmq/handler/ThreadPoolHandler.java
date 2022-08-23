@@ -1,7 +1,8 @@
-package com.keimons.dmq.wrapper;
+package com.keimons.dmq.handler;
 
 import com.keimons.dmq.core.Handler;
 import com.keimons.dmq.core.Wrapper;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -14,7 +15,8 @@ import java.util.concurrent.*;
  * @version 1.0
  * @since 17
  */
-class ThreadPoolHandler extends ThreadPoolExecutor implements Handler<Runnable> {
+@ApiStatus.Experimental
+public class ThreadPoolHandler extends ThreadPoolExecutor implements Handler<Runnable> {
 
 	private static final RejectedExecutionHandler defaultHandler = new AdaptPolicy(new AbortPolicy());
 
@@ -61,7 +63,7 @@ class ThreadPoolHandler extends ThreadPoolExecutor implements Handler<Runnable> 
 		this.execute(new Task(wrapperTask));
 	}
 
-	private record Task(Wrapper<Runnable> wrapperTask) implements Runnable {
+	record Task(Wrapper<Runnable> wrapperTask) implements Runnable {
 
 		@Override
 		public void run() {
