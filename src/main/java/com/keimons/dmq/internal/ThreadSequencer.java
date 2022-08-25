@@ -1,6 +1,6 @@
 package com.keimons.dmq.internal;
 
-import com.keimons.dmq.core.Actuator;
+import com.keimons.dmq.core.Sequencer;
 import com.keimons.dmq.core.DispatchTask;
 
 import java.util.Iterator;
@@ -11,13 +11,13 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * 执行器
+ * 线程定序器
  *
  * @author houyn[monkey@keimons.com]
  * @version 1.0
  * @since 17
  */
-public class DefaultActuator implements Actuator, Runnable {
+public class ThreadSequencer implements Sequencer, Runnable {
 
 	BlockingDeque<DispatchTask> queue = new LinkedBlockingDeque<>();
 
@@ -27,9 +27,10 @@ public class DefaultActuator implements Actuator, Runnable {
 
 	Sync sync = new Sync();
 
-	public DefaultActuator(ThreadFactory threadFactory) {
+	public ThreadSequencer(ThreadFactory threadFactory) {
 		thread = threadFactory.newThread(this);
 		sync.setThread(thread);
+		thread.start();
 	}
 
 	@Override

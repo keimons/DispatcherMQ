@@ -1,6 +1,6 @@
 package com.keimons.dmq.internal;
 
-import com.keimons.dmq.core.Actuator;
+import com.keimons.dmq.core.Sequencer;
 import com.keimons.dmq.core.DispatchTask;
 
 /**
@@ -11,15 +11,16 @@ import com.keimons.dmq.core.DispatchTask;
  * @since 17
  */
 public interface Serialization {
-	void dispatch(DispatchTask dispatchTask, Actuator actuator);
 
-	void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1);
+	void dispatch(DispatchTask dispatchTask, Sequencer sequencer);
 
-	void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1, Actuator a2);
+	void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1);
 
-	void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1, Actuator a2, Actuator a3);
+	void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2);
 
-	void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1, Actuator a2, Actuator a3, Actuator a4);
+	void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2, Sequencer a3);
 
-	void dispatch(DispatchTask dispatchTask, Actuator... actuators);
+	void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2, Sequencer a3, Sequencer a4);
+
+	void dispatch(DispatchTask dispatchTask, Sequencer... sequencers);
 }

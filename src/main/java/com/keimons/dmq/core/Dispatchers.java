@@ -1,7 +1,7 @@
 package com.keimons.dmq.core;
 
 import com.keimons.dmq.handler.Handlers;
-import com.keimons.dmq.internal.DefaultActuator;
+import com.keimons.dmq.internal.ThreadSequencer;
 import com.keimons.dmq.internal.DefaultCompositeHandler;
 import com.keimons.dmq.internal.SerialMode;
 
@@ -37,7 +37,7 @@ public class Dispatchers {
 		return new DefaultCompositeHandler<>(nThreads, 0, nThreads,
 				SerialMode.producer(),
 				Executors.defaultThreadFactory(),
-				DefaultActuator::new,
+				ThreadSequencer::new,
 				DEFAULT_HANDLER_DIRECT
 		);
 	}
@@ -53,7 +53,7 @@ public class Dispatchers {
 	public static <E extends Enum<E>> CompositeHandler<E> newCompositeHandler(
 			int nThreads, EnumMap<E, Handler<Runnable>> handlers) {
 		return new DefaultCompositeHandler<>(nThreads, 0, nThreads,
-				SerialMode.producer(), Executors.defaultThreadFactory(), DefaultActuator::new, handlers
+				SerialMode.producer(), Executors.defaultThreadFactory(), ThreadSequencer::new, handlers
 		);
 	}
 

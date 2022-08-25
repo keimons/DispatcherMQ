@@ -1,6 +1,6 @@
 package com.keimons.dmq.internal;
 
-import com.keimons.dmq.core.Actuator;
+import com.keimons.dmq.core.Sequencer;
 import com.keimons.dmq.core.DispatchTask;
 import com.keimons.dmq.core.Handler;
 
@@ -17,18 +17,18 @@ public class DispatchTask2 extends AbstractDispatchTask {
 
 	final Object fence1;
 
-	final Actuator actuator0;
+	final Sequencer sequencer0;
 
-	final Actuator actuator1;
+	final Sequencer sequencer1;
 
 	public DispatchTask2(Handler<Runnable> handler, Runnable task, Object fence0, Object fence1,
-						 Actuator actuator0, Actuator actuator1) {
+						 Sequencer sequencer0, Sequencer sequencer1) {
 		super(handler, task);
 		this.fence0 = fence0;
 		this.fence1 = fence1;
-		this.forbids = actuator0 == actuator1 ? 0 : 1;
-		this.actuator0 = actuator0;
-		this.actuator1 = actuator1;
+		this.forbids = sequencer0 == sequencer1 ? 0 : 1;
+		this.sequencer0 = sequencer0;
+		this.sequencer1 = sequencer1;
 	}
 
 	@Override
@@ -48,11 +48,11 @@ public class DispatchTask2 extends AbstractDispatchTask {
 
 	@Override
 	public void wakeup() {
-		if (actuator0 == actuator1) {
-			actuator0.release(this);
+		if (sequencer0 == sequencer1) {
+			sequencer0.release(this);
 		} else {
-			actuator0.release(this);
-			actuator1.release(this);
+			sequencer0.release(this);
+			sequencer1.release(this);
 		}
 	}
 }

@@ -31,7 +31,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 
 	private final Handler<Runnable>[] handlers;
 
-	private final Actuator[] actuators;
+	private final Sequencer[] sequencers;
 
 	/**
 	 * 构造复合执行调度器
@@ -46,7 +46,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	 * @param handlers      复合执行器
 	 */
 	public DefaultCompositeHandler(int nThreads, int start, int end, Serialization serialization,
-								   ThreadFactory threadFactory, ActuatorFactory actuatorFactory,
+								   ThreadFactory threadFactory, SequencerFactory sequencerFactory,
 								   EnumMap<E, Handler<Runnable>> handlers) {
 		// 0 <= start < end <= nThread
 		if (!(0 <= start && start < end && end <= nThreads) || handlers == null || handlers.size() < 1) {
@@ -55,47 +55,47 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		OptionalInt max = handlers.keySet().stream().mapToInt(Enum::ordinal).max();
 		this.nThreads = nThreads;
 		this.serialization = serialization;
-		this.actuators = ArrayUtils.newInstance(Actuator.class, nThreads);
+		this.sequencers = ArrayUtils.newInstance(Sequencer.class, nThreads);
 		this.handlers = ArrayUtils.newInstance(Handler.class, max.getAsInt() + 1);
-		IntStream.range(start, end).forEach(index -> actuators[index] = actuatorFactory.newActuator(threadFactory));
+		IntStream.range(start, end).forEach(index -> sequencers[index] = sequencerFactory.newSequencer(threadFactory));
 		handlers.forEach((key, value) -> this.handlers[key.ordinal()] = value);
 	}
 
 	protected void dispatch(int type, Runnable task, Object fence) {
-		Actuator actuator = actuators[fence.hashCode() % nThreads];
+		Sequencer sequencer = sequencers[fence.hashCode() % nThreads];
 		Handler<Runnable> handler = handlers[type];
-		var wrapperTask = new DispatchTask1(handler, task, fence, actuator);
-		actuator.actuate(wrapperTask);
+		var wrapperTask = new DispatchTask1(handler, task, fence, sequencer);
+		sequencer.actuate(wrapperTask);
 	}
 
 	protected void dispatch(int type, Runnable task, Object fence0, Object fence1) {
-		Actuator actuator0 = actuators[fence0.hashCode() % nThreads];
-		Actuator actuator1 = actuators[fence1.hashCode() % nThreads];
+		Sequencer sequencer0 = sequencers[fence0.hashCode() % nThreads];
+		Sequencer sequencer1 = sequencers[fence1.hashCode() % nThreads];
 		Handler<Runnable> handler = handlers[type];
-		var wrapperTask = new DispatchTask2(handler, task, fence0, fence1, actuator0, actuator1);
-		if (actuator0 == actuator1) {
+		var wrapperTask = new DispatchTask2(handler, task, fence0, fence1, sequencer0, sequencer1);
+		if (sequencer0 == sequencer1) {
 			serialization.dispatch(wrapperTask);
 		} else {
-			serialization.dispatch(wrapperTask, actuator0, actuator1);
+			serialization.dispatch(wrapperTask, sequencer0, sequencer1);
 		}
 	}
 
 	protected void dispatch(int type, Runnable task, Object fence0, Object fence1, Object fence2) {
-		Actuator actuator0 = actuators[fence0.hashCode() % nThreads];
-		Actuator actuator1 = actuators[fence1.hashCode() % nThreads];
-		Actuator actuator2 = actuators[fence2.hashCode() % nThreads];
+		Sequencer sequencer0 = sequencers[fence0.hashCode() % nThreads];
+		Sequencer sequencer1 = sequencers[fence1.hashCode() % nThreads];
+		Sequencer sequencer2 = sequencers[fence2.hashCode() % nThreads];
 		Handler<Runnable> handler = handlers[type];
-		var wrapperTask = new DispatchTask3(handler, task, fence0, actuator0, fence1, actuator1, fence2, actuator2);
-		if (actuator0 == actuator1) {
-			if (actuator0 == actuator2) {
-				serialization.dispatch(wrapperTask, actuator0);
+		var wrapperTask = new DispatchTask3(handler, task, fence0, sequencer0, fence1, sequencer1, fence2, sequencer2);
+		if (sequencer0 == sequencer1) {
+			if (sequencer0 == sequencer2) {
+				serialization.dispatch(wrapperTask, sequencer0);
 			} else {
-				serialization.dispatch(wrapperTask, actuator0, actuator2);
+				serialization.dispatch(wrapperTask, sequencer0, sequencer2);
 			}
-		} else if (actuator0 == actuator2 || actuator1 == actuator2) {
-			serialization.dispatch(wrapperTask, actuator0, actuator1);
+		} else if (sequencer0 == sequencer2 || sequencer1 == sequencer2) {
+			serialization.dispatch(wrapperTask, sequencer0, sequencer1);
 		} else {
-			serialization.dispatch(wrapperTask, actuator0, actuator1, actuator2);
+			serialization.dispatch(wrapperTask, sequencer0, sequencer1, sequencer2);
 		}
 	}
 
@@ -105,12 +105,12 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 			case 2 -> dispatch(type, task, fences[0], fences[1]);
 			case 3 -> dispatch(type, task, fences[0], fences[1], fences[2]);
 			default -> {
-				Stream<Actuator> stream =
-						Stream.of(fences).map(o -> this.actuators[o.hashCode() % nThreads]).distinct();
-				Actuator[] actuators = stream.toArray(Actuator[]::new);
+				Stream<Sequencer> stream =
+						Stream.of(fences).map(o -> this.sequencers[o.hashCode() % nThreads]).distinct();
+				Sequencer[] sequencers = stream.toArray(Sequencer[]::new);
 				Handler<Runnable> handler = handlers[type];
-				var wrapperTask = new DispatchTaskX(handler, task, fences, actuators);
-				serialization.dispatch(wrapperTask, actuators);
+				var wrapperTask = new DispatchTaskX(handler, task, fences, sequencers);
+				serialization.dispatch(wrapperTask, sequencers);
 			}
 		}
 	}

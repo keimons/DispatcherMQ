@@ -1,6 +1,6 @@
 package com.keimons.dmq.internal;
 
-import com.keimons.dmq.core.Actuator;
+import com.keimons.dmq.core.Sequencer;
 import com.keimons.dmq.core.DispatchTask;
 import com.keimons.dmq.core.Handler;
 
@@ -15,31 +15,31 @@ public class DispatchTask3 extends AbstractDispatchTask {
 
 	final Object fence0;
 
-	final Actuator actuator0;
+	final Sequencer sequencer0;
 
 	final Object fence1;
 
-	final Actuator actuator1;
+	final Sequencer sequencer1;
 
 	final Object fence2;
 
-	final Actuator actuator2;
+	final Sequencer sequencer2;
 
 	public DispatchTask3(Handler<Runnable> handler, Runnable task,
-						 Object fence0, Actuator actuator0,
-						 Object fence1, Actuator actuator1,
-						 Object fence2, Actuator actuator2) {
+						 Object fence0, Sequencer sequencer0,
+						 Object fence1, Sequencer sequencer1,
+						 Object fence2, Sequencer sequencer2) {
 		super(handler, task);
 		this.fence0 = fence0;
-		this.actuator0 = actuator0;
+		this.sequencer0 = sequencer0;
 		this.fence1 = fence1;
-		this.actuator1 = actuator1;
+		this.sequencer1 = sequencer1;
 		this.fence2 = fence2;
-		this.actuator2 = actuator2;
-		if (this.actuator0 == this.actuator1 && this.actuator1 == this.actuator2) {
+		this.sequencer2 = sequencer2;
+		if (this.sequencer0 == this.sequencer1 && this.sequencer1 == this.sequencer2) {
 			this.forbids = 0;
 		}
-		if (this.actuator0 == this.actuator1 || this.actuator0 == this.actuator2 || this.actuator1 == this.actuator2) {
+		if (this.sequencer0 == this.sequencer1 || this.sequencer0 == this.sequencer2 || this.sequencer1 == this.sequencer2) {
 			this.forbids = 1;
 		} else {
 			this.forbids = 2;
@@ -63,21 +63,21 @@ public class DispatchTask3 extends AbstractDispatchTask {
 
 	@Override
 	public void wakeup() {
-		if (this.actuator0 == this.actuator1) {
-			if (this.actuator0 == this.actuator2) {
-				actuator0.release(this);
+		if (this.sequencer0 == this.sequencer1) {
+			if (this.sequencer0 == this.sequencer2) {
+				sequencer0.release(this);
 			} else {
-				actuator0.release(this);
-				actuator2.release(this);
+				sequencer0.release(this);
+				sequencer2.release(this);
 			}
 		}
-		if (this.actuator0 == this.actuator2 || this.actuator1 == this.actuator2) {
-			actuator0.release(this);
-			actuator1.release(this);
+		if (this.sequencer0 == this.sequencer2 || this.sequencer1 == this.sequencer2) {
+			sequencer0.release(this);
+			sequencer1.release(this);
 		} else {
-			actuator0.release(this);
-			actuator1.release(this);
-			actuator2.release(this);
+			sequencer0.release(this);
+			sequencer1.release(this);
+			sequencer2.release(this);
 		}
 	}
 }

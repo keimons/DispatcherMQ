@@ -1,6 +1,6 @@
 package com.keimons.dmq.internal;
 
-import com.keimons.dmq.core.Actuator;
+import com.keimons.dmq.core.Sequencer;
 import com.keimons.dmq.core.DispatchTask;
 
 import java.util.concurrent.locks.Lock;
@@ -11,9 +11,9 @@ import java.util.concurrent.locks.ReentrantLock;
  * <p>
  * 不同的串行模式能提供不同的性能和特性：
  * <ul>
- *     <li>{@link #COMPLETE}，<b>完整版一致性</b>，对于所有生产者公平的模式，严格按照生产者的生产顺序进行消费。
+ *     <li>{@link #complete() <b>完整版一致性</b>}，对于所有生产者公平的模式，严格按照生产者的生产顺序进行消费。
  *     但是，这可能是个伪需求，对于不同的生产者而言，可能本身就无所谓顺序。</li>
- *     <li>{@link #PRODUCER}，<b>生产者一致性</b>，对于单个生产者，严格按照先生产先消费的顺序。能够提供更好的性能。</li>
+ *     <li>{@link #producer() <b>生产者一致性</b>}，对于单个生产者，严格按照先生产先消费的顺序。能够提供更好的性能。</li>
  * </ul>
  * <p>
  * <b>注意</b>：这是内部API，随时可能发生变动，恕不另行通知。但是，任何的修改都是基于已提供的特性。
@@ -54,12 +54,12 @@ public class SerialMode {
 
 
 		@Override
-		public void dispatch(DispatchTask dispatchTask, Actuator actuator) {
-			actuator.actuate(dispatchTask);
+		public void dispatch(DispatchTask dispatchTask, Sequencer sequencer) {
+			sequencer.actuate(dispatchTask);
 		}
 
 		@Override
-		public void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1) {
+		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1) {
 			main.lock();
 			try {
 				a0.actuate(dispatchTask);
@@ -70,7 +70,7 @@ public class SerialMode {
 		}
 
 		@Override
-		public void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1, Actuator a2) {
+		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2) {
 			main.lock();
 			try {
 				a0.actuate(dispatchTask);
@@ -82,7 +82,7 @@ public class SerialMode {
 		}
 
 		@Override
-		public void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1, Actuator a2, Actuator a3) {
+		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2, Sequencer a3) {
 			main.lock();
 			try {
 				a0.actuate(dispatchTask);
@@ -95,8 +95,8 @@ public class SerialMode {
 		}
 
 		@Override
-		public void dispatch(DispatchTask dispatchTask, Actuator a0, Actuator a1, Actuator a2, Actuator a3,
-							 Actuator a4) {
+		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2, Sequencer a3,
+							 Sequencer a4) {
 			main.lock();
 			try {
 				a0.actuate(dispatchTask);
@@ -110,11 +110,11 @@ public class SerialMode {
 		}
 
 		@Override
-		public void dispatch(DispatchTask dispatchTask, Actuator... actuators) {
+		public void dispatch(DispatchTask dispatchTask, Sequencer... sequencers) {
 			main.lock();
 			try {
-				for (int i = 0; i < actuators.length; i++) {
-					actuators[i].actuate(dispatchTask);
+				for (int i = 0; i < sequencers.length; i++) {
+					sequencers[i].actuate(dispatchTask);
 				}
 			} finally {
 				main.unlock();
@@ -129,10 +129,10 @@ public class SerialMode {
 		}
 
 		@Override
-		public void dispatch(DispatchTask dispatchTask, Actuator actuator) {
+		public void dispatch(DispatchTask dispatchTask, Sequencer sequencer) {
 			main.lock();
 			try {
-				actuator.actuate(dispatchTask);
+				sequencer.actuate(dispatchTask);
 			} finally {
 				main.unlock();
 			}

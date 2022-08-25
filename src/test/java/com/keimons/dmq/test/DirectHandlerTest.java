@@ -3,7 +3,7 @@ package com.keimons.dmq.test;
 import com.keimons.dmq.core.CompositeHandler;
 import com.keimons.dmq.core.Handler;
 import com.keimons.dmq.handler.Handlers;
-import com.keimons.dmq.internal.DefaultActuator;
+import com.keimons.dmq.internal.ThreadSequencer;
 import com.keimons.dmq.internal.DefaultCompositeHandler;
 import com.keimons.dmq.internal.SerialMode;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ public class DirectHandlerTest {
 		EnumMap<Defaults.Type, Handler<Runnable>> map = new EnumMap<>(Defaults.Type.class);
 		map.put(Defaults.Type.Default, Handlers.newDirectHandler());
 		CompositeHandler<Defaults.Type> dispatcher = new DefaultCompositeHandler<>(4, 0, 4,
-				SerialMode.producer(), Executors.defaultThreadFactory(), DefaultActuator::new, map);
+				SerialMode.producer(), Executors.defaultThreadFactory(), ThreadSequencer::new, map);
 		for (int i = 0; i < 10000; i++) {
 			final int index = i;
 			dispatcher.dispatch(Defaults.Type.Default, () -> System.out.println(index), 1);
@@ -38,7 +38,7 @@ public class DirectHandlerTest {
 		EnumMap<Defaults.Type, Handler<Runnable>> map = new EnumMap<>(Defaults.Type.class);
 		map.put(Defaults.Type.Default, Handlers.newDirectHandler());
 		CompositeHandler<Defaults.Type> dispatcher = new DefaultCompositeHandler<>(4, 0, 4,
-				SerialMode.producer(), Executors.defaultThreadFactory(), DefaultActuator::new, map);
+				SerialMode.producer(), Executors.defaultThreadFactory(), ThreadSequencer::new, map);
 		dispatcher.dispatch(Defaults.Type.Default, () -> {
 			try {
 				Thread.sleep(1000);

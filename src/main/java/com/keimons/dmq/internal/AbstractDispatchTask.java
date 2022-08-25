@@ -45,6 +45,11 @@ public abstract class AbstractDispatchTask implements DispatchTask, Wrapper<Runn
 	}
 
 	@Override
+	public void deliver() {
+		handler.handle(this);
+	}
+
+	@Override
 	public boolean tryIntercept() {
 		int v;
 		do {
@@ -53,11 +58,6 @@ public abstract class AbstractDispatchTask implements DispatchTask, Wrapper<Runn
 		return v > 0;
 	}
 
-	/**
-	 * {@inheritDoc} 唤醒
-	 *
-	 * @return {@inheritDoc}
-	 */
 	@Override
 	public boolean isIntercepted() {
 		return intercepted;
@@ -90,10 +90,5 @@ public abstract class AbstractDispatchTask implements DispatchTask, Wrapper<Runn
 	@Override
 	public Runnable unwrap() {
 		return task;
-	}
-
-	@Override
-	public void deliver() {
-		handler.handle(this);
 	}
 }
