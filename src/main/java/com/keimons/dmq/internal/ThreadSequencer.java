@@ -1,7 +1,8 @@
 package com.keimons.dmq.internal;
 
-import com.keimons.dmq.core.Sequencer;
 import com.keimons.dmq.core.DispatchTask;
+import com.keimons.dmq.core.Sequencer;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -11,7 +12,9 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * 线程定序器
+ * 使用单独线程的定序器
+ * <p>
+ * 启动一个单独的线程，用于对任务进行排队。
  *
  * @author houyn[monkey@keimons.com]
  * @version 1.0
@@ -19,18 +22,27 @@ import java.util.concurrent.ThreadFactory;
  */
 public class ThreadSequencer implements Sequencer, Runnable {
 
+	private final ThreadFactory factory;
+
 	BlockingDeque<DispatchTask> queue = new LinkedBlockingDeque<>();
 
 	List<DispatchTask> fences = new LinkedList<>();
 
-	Thread thread;
-
+	/**
+	 * 乐观同步器
+	 */
 	Sync sync = new Sync();
 
-	public ThreadSequencer(ThreadFactory threadFactory) {
-		thread = threadFactory.newThread(this);
-		sync.setThread(thread);
+	public ThreadSequencer(ThreadFactory factory) {
+		this.factory = factory;
+		startup();
+	}
+
+	private void startup() {
+		Thread thread = factory.newThread(this);
 		thread.start();
+		sync.setThread(thread);
+		sync.acquireWrite();
 	}
 
 	@Override
@@ -54,7 +66,7 @@ public class ThreadSequencer implements Sequencer, Runnable {
 		return true;
 	}
 
-	private DispatchTask next() {
+	private @Nullable DispatchTask next() {
 		DispatchTask task = null;
 		for (; ; ) {
 			Sync sync = this.sync;
@@ -82,16 +94,19 @@ public class ThreadSequencer implements Sequencer, Runnable {
 
 	@Override
 	public void run() {
-		for (; ; ) {
-			try {
-				DispatchTask task = next();
-				task.deliver();
-				if (task.isIntercepted()) {
-					fences.add(task);
+		try {
+			DispatchTask task;
+			while ((task = next()) != null) {
+				try {
+					task.deliver();
+				} finally {
+					if (task.isIntercepted()) {
+						fences.add(task);
+					}
 				}
-			} catch (Throwable e) {
-				e.printStackTrace();
 			}
+		} finally {
+			startup();
 		}
 	}
 }

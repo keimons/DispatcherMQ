@@ -3,9 +3,11 @@ package com.keimons.dmq.internal;
 import com.keimons.dmq.core.*;
 import com.keimons.dmq.utils.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.EnumMap;
-import java.util.OptionalInt;
+import java.util.*;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -25,13 +27,56 @@ import java.util.stream.Stream;
  */
 public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHandler<E>, Dispatcher<Runnable> {
 
+	/**
+	 * 运行中
+	 * <p>
+	 * 接受新任务并处理排队任务。
+	 */
+	protected static final int RUNNING = 0;
+
+	/**
+	 * 已关闭
+	 * <p>
+	 * 不接受新任务，正常处理排队中的任务，任务处理完成后线程池关闭。
+	 */
+	protected static final int CLOSE = 1 << 0;
+
+	/**
+	 * 已停止
+	 * <p>
+	 * 不接受新任务，不处理排队任务，中断正在进行的任务。
+	 */
+	protected static final int SHUTDOWN = 1 << 1;
+
+	/**
+	 * 已终结
+	 * <p>
+	 * 生命周期的最后一个状态，不接受新任务，不处理排队任务，中断正在进行的任务，尽可能的快速退出。
+	 */
+	protected static final int TERMINATED = 1 << 2;
+
 	private final int nThreads;
+
+	private final ThreadFactory threadFactory;
 
 	private final Serialization serialization;
 
 	private final Handler<Runnable>[] handlers;
 
 	private final Sequencer[] sequencers;
+
+	/**
+	 * 线程池状态
+	 * <p>
+	 * 用于提供生命周期的所有状态。{@code state}的取值有：
+	 * <ul>
+	 *     <li>{@link #RUNNING}：运行中，接受新任务并处理排队任务。</li>
+	 *     <li>{@link #CLOSE}：已关闭，不接受新任务，但处理排队任务。</li>
+	 *     <li>{@link #SHUTDOWN}：已停止，不接受新任务，不处理排队任务，中断正在进行的任务。</li>
+	 *     <li>{@link #TERMINATED}：已终结，生命周期的最后一个状态。</li>
+	 * </ul>
+	 */
+	protected volatile int state = RUNNING;
 
 	/**
 	 * 构造复合执行调度器
@@ -54,6 +99,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		}
 		OptionalInt max = handlers.keySet().stream().mapToInt(Enum::ordinal).max();
 		this.nThreads = nThreads;
+		this.threadFactory = threadFactory;
 		this.serialization = serialization;
 		this.sequencers = ArrayUtils.newInstance(Sequencer.class, nThreads);
 		this.handlers = ArrayUtils.newInstance(Handler.class, max.getAsInt() + 1);
@@ -155,5 +201,124 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	@Override
 	public void dispatch(@NotNull E type, @NotNull Runnable task, @NotNull Object... fences) {
 		dispatch(type.ordinal(), task, fences);
+	}
+
+	/**
+	 * 使用单独线程的定序器
+	 * <p>
+	 * 启动一个单独的线程，用于对任务进行排队。
+	 *
+	 * @author houyn[monkey@keimons.com]
+	 * @version 1.0
+	 * @since 17
+	 */
+	private class ThreadSequencer implements Sequencer, Runnable {
+
+		BlockingDeque<DispatchTask> queue = new LinkedBlockingDeque<>();
+
+		List<DispatchTask> fences = new LinkedList<>();
+
+		/**
+		 * 乐观同步器
+		 */
+		Sync sync = new Sync();
+
+		/**
+		 * 启动一个线程
+		 */
+		private void start() {
+			Thread thread = threadFactory.newThread(this);
+			thread.start();
+			sync.setThread(thread);
+			sync.acquireWrite();
+		}
+
+		/**
+		 * 定序器退出
+		 * <p>
+		 * 当发生异常或关闭调度器时，定序器才会退出。发生退出时：
+		 * <ul>
+		 *     <li><b>异常退出</b>：删除当前线程，并启动一个新线程。</li>
+		 *     <li><b>关闭调度器</b>：退出当前线程。</li>
+		 * </ul>
+		 *
+		 * @param throwable {@code true}异常退出，{@code false}调度器关闭
+		 */
+		private void sequencerExit(boolean throwable) {
+			if (throwable && state < CLOSE) {
+				start();
+			}
+		}
+
+		@Override
+		public void actuate(DispatchTask dispatchTask) {
+			queue.offer(dispatchTask);
+			sync.acquireWrite();
+		}
+
+		@Override
+		public void release(DispatchTask dispatchTask) {
+			sync.acquireWrite();
+		}
+
+		private boolean isDelivery(DispatchTask task) {
+			// 判断任务是否可以越过所有屏障执行
+			for (int i = 0, length = fences.size(); i < length; i++) {
+				if (task.dependsOn(fences.get(i))) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		private @Nullable DispatchTask next() {
+			DispatchTask task = null;
+			for (; ; ) {
+				// 状态检测，如果线程池已停止
+				if (state >= SHUTDOWN || (state >= CLOSE && queue.isEmpty())) {
+					return null;
+				}
+				Sync sync = this.sync;
+				int stamp = sync.acquireRead();
+				fences.removeIf(fence -> !fence.isIntercepted());
+				Iterator<DispatchTask> iterator = queue.iterator();
+				while (iterator.hasNext()) {
+					task = iterator.next();
+					if (isDelivery(task)) {
+						// 这个任务已经可以执行了，所以，从缓存的队列中移除任务
+						iterator.remove();
+						if (task.tryIntercept()) {
+							fences.add(task);
+							task.wakeup();
+						} else {
+							return task;
+						}
+					}
+				}
+				if (task == null) {
+					sync.validate(stamp);
+				}
+			}
+		}
+
+		@Override
+		public void run() {
+			boolean throwable = true;
+			try {
+				DispatchTask task;
+				while ((task = next()) != null) {
+					try {
+						task.deliver();
+					} finally {
+						if (task.isIntercepted()) {
+							fences.add(task);
+						}
+					}
+				}
+				throwable = false;
+			} finally {
+				sequencerExit(throwable);
+			}
+		}
 	}
 }

@@ -1,7 +1,7 @@
 package com.keimons.dmq.internal;
 
-import com.keimons.dmq.core.Sequencer;
 import com.keimons.dmq.core.DispatchTask;
+import com.keimons.dmq.core.Sequencer;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;

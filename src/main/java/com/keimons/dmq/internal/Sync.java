@@ -26,7 +26,7 @@ public class Sync implements OptimisticSynchronizer {
 	 * 同步器与线程是绑定的，{@link #acquireWrite()}，版本变更时，
 	 * 有可能需要唤醒等待中的线程。
 	 */
-	private Thread thread;
+	private volatile Thread thread;
 
 	/**
 	 * 版本控制

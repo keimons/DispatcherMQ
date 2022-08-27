@@ -1,9 +1,9 @@
 package com.keimons.dmq.core;
 
 import com.keimons.dmq.handler.Handlers;
-import com.keimons.dmq.internal.ThreadSequencer;
 import com.keimons.dmq.internal.DefaultCompositeHandler;
 import com.keimons.dmq.internal.SerialMode;
+import com.keimons.dmq.internal.ThreadSequencer;
 
 import java.util.EnumMap;
 import java.util.concurrent.Executors;

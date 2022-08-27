@@ -1,8 +1,8 @@
 package com.keimons.dmq.internal;
 
-import com.keimons.dmq.core.Sequencer;
 import com.keimons.dmq.core.DispatchTask;
 import com.keimons.dmq.core.Handler;
+import com.keimons.dmq.core.Sequencer;
 
 /**
  * 带有2个执行屏障的调度任务
