@@ -9,7 +9,6 @@ import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -81,18 +80,17 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	/**
 	 * 构造复合执行调度器
 	 * <p>
-	 * 带有复合执行器的调度器不仅仅可以用于单机模式，还可以用于集群模式。
+	 * 带有复合处理器的调度器不仅仅可以用于单机模式，还可以用于集群模式。
 	 * 参数满足：{@code 0 <= start < end <= nThread}。
 	 *
 	 * @param nThreads      总线程数量
 	 * @param start         当前调度器开始位置
 	 * @param end           当前调度器结束位置
 	 * @param serialization 排序类型
-	 * @param handlers      复合执行器
+	 * @param handlers      复合处理器
 	 */
 	public DefaultCompositeHandler(int nThreads, int start, int end, Serialization serialization,
-								   ThreadFactory threadFactory, SequencerFactory sequencerFactory,
-								   EnumMap<E, Handler<Runnable>> handlers) {
+								   ThreadFactory threadFactory, EnumMap<E, Handler<Runnable>> handlers) {
 		// 0 <= start < end <= nThread
 		if (!(0 <= start && start < end && end <= nThreads) || handlers == null || handlers.size() < 1) {
 			throw new IllegalArgumentException();
@@ -101,9 +99,14 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		this.nThreads = nThreads;
 		this.threadFactory = threadFactory;
 		this.serialization = serialization;
+
 		this.sequencers = ArrayUtils.newInstance(Sequencer.class, nThreads);
 		this.handlers = ArrayUtils.newInstance(Handler.class, max.getAsInt() + 1);
-		IntStream.range(start, end).forEach(index -> sequencers[index] = sequencerFactory.newSequencer(threadFactory));
+		for (int i = start; i < end; i++) {
+			ThreadSequencer sequencer = new ThreadSequencer();
+			sequencer.start();
+			sequencers[i] = sequencer;
+		}
 		handlers.forEach((key, value) -> this.handlers[key.ordinal()] = value);
 	}
 

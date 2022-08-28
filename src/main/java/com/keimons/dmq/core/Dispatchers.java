@@ -3,7 +3,6 @@ package com.keimons.dmq.core;
 import com.keimons.dmq.handler.Handlers;
 import com.keimons.dmq.internal.DefaultCompositeHandler;
 import com.keimons.dmq.internal.SerialMode;
-import com.keimons.dmq.internal.ThreadSequencer;
 
 import java.util.EnumMap;
 import java.util.concurrent.Executors;
@@ -31,29 +30,29 @@ public class Dispatchers {
 	 * <b>注意：</b>如果任务被阻塞，将会影响该线程后续任务的执行。
 	 *
 	 * @param nThreads 调度线程数量
-	 * @return 带有本地执行器的调度器
+	 * @return 带有本地处理器的调度器
 	 */
 	public static Dispatcher<Runnable> newDispatcher(int nThreads) {
-		return new DefaultCompositeHandler<>(nThreads, 0, nThreads,
+		return new DefaultCompositeHandler<>(
+				nThreads, 0, nThreads,
 				SerialMode.producer(),
 				Executors.defaultThreadFactory(),
-				ThreadSequencer::new,
 				DEFAULT_HANDLER_DIRECT
 		);
 	}
 
 	/**
-	 * 构造带有任务调度功能的复合执行器
+	 * 构造带有任务调度功能的复合处理器
 	 *
 	 * @param nThreads 调度线程数量
 	 * @param handlers 复合处理器
-	 * @param <E>      复合执行器类型
-	 * @return 带有任务调度功能的复合执行器
+	 * @param <E>      复合处理器类型
+	 * @return 带有任务调度功能的复合处理器
 	 */
 	public static <E extends Enum<E>> CompositeHandler<E> newCompositeHandler(
 			int nThreads, EnumMap<E, Handler<Runnable>> handlers) {
 		return new DefaultCompositeHandler<>(nThreads, 0, nThreads,
-				SerialMode.producer(), Executors.defaultThreadFactory(), ThreadSequencer::new, handlers
+				SerialMode.producer(), Executors.defaultThreadFactory(), handlers
 		);
 	}
 

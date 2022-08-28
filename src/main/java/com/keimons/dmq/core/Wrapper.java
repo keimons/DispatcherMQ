@@ -16,14 +16,14 @@ package com.keimons.dmq.core;
 public interface Wrapper<T> {
 
 	/**
-	 * 调用包装中的内容
+	 * 执行包装中的内容
 	 * <p>
 	 * 如果这个方法不能被调用，请确保{@link #cancel()}方法至少会被调用1次。
 	 */
 	void invoke();
 
 	/**
-	 * 取消调用包装中的内容
+	 * 取消执行包装中的内容
 	 */
 	void cancel();
 

@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
  * 任务调度器
  * <p>
  * <p>
- * 调度器会对任务进行重排序，并在合适的时机交由执行器执行。任务的重排序必须满足：
+ * 调度器会对任务进行重排序，并在合适的时机交由处理器执行。任务的重排序必须满足：
  * <b>{@code as-if-serial语义}</b>和<b>{@code happens-before原则}</b>。
  * 而确定任务能否重排序的依据称之为：<b>执行屏障</b>。执行屏障可以确保：
  * <ul>
