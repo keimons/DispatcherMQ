@@ -16,14 +16,12 @@ public class ThrowableTest {
 	@Test
 	public void test() {
 		Dispatcher<Runnable> dispatcher = Dispatchers.newDispatcher(1);
-		dispatcher.dispatch(() -> {
-			throw new RuntimeException();
-		}, 0);
-		dispatcher.dispatch(() -> {
-			throw new RuntimeException();
-		}, 0);
-		dispatcher.dispatch(() -> {
-			throw new RuntimeException();
-		}, 0);
+		dispatcher.dispatch(this::throwException, 0);
+		dispatcher.dispatch(this::throwException, 0);
+		dispatcher.dispatch(this::throwException, 0);
+	}
+
+	private void throwException() {
+		throw new RuntimeException();
 	}
 }

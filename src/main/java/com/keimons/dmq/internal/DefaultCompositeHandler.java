@@ -2,13 +2,16 @@ package com.keimons.dmq.internal;
 
 import com.keimons.dmq.core.*;
 import com.keimons.dmq.utils.ArrayUtils;
+import com.keimons.dmq.utils.MiscUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.invoke.VarHandle;
 import java.util.*;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 /**
@@ -27,32 +30,34 @@ import java.util.stream.Stream;
 public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHandler<E>, Dispatcher<Runnable> {
 
 	/**
+	 * 未启动
+	 * <p>
+	 * 尚未启动的调度器
+	 */
+	protected static final int NEW = Integer.MAX_VALUE;
+
+	/**
 	 * 运行中
 	 * <p>
-	 * 接受新任务并处理排队任务。
+	 * 接受新的调度任务并处理排队任务。
 	 */
 	protected static final int RUNNING = 0;
 
 	/**
-	 * 已关闭
+	 * 关闭中
 	 * <p>
-	 * 不接受新任务，正常处理排队中的任务，任务处理完成后线程池关闭。
+	 * 不接受新任务，但处理排队中的任务。
 	 */
-	protected static final int CLOSE = 1 << 0;
-
-	/**
-	 * 已停止
-	 * <p>
-	 * 不接受新任务，不处理排队任务，中断正在进行的任务。
-	 */
-	protected static final int SHUTDOWN = 1 << 1;
+	protected static final int SHUTDOWN = 1;
 
 	/**
 	 * 已终结
 	 * <p>
 	 * 生命周期的最后一个状态，不接受新任务，不处理排队任务，中断正在进行的任务，尽可能的快速退出。
 	 */
-	protected static final int TERMINATED = 1 << 2;
+	protected static final int TERMINATED = 2;
+
+	private static final VarHandle VV = MiscUtils.findVarHandle(DefaultCompositeHandler.class, "state", int.class);
 
 	private final int nThreads;
 
@@ -69,13 +74,13 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	 * <p>
 	 * 用于提供生命周期的所有状态。{@code state}的取值有：
 	 * <ul>
-	 *     <li>{@link #RUNNING}：运行中，接受新任务并处理排队任务。</li>
-	 *     <li>{@link #CLOSE}：已关闭，不接受新任务，但处理排队任务。</li>
-	 *     <li>{@link #SHUTDOWN}：已停止，不接受新任务，不处理排队任务，中断正在进行的任务。</li>
-	 *     <li>{@link #TERMINATED}：已终结，生命周期的最后一个状态。</li>
+	 *     <li>{@link #NEW 未启动}：尚未启动的调度器。</li>
+	 *     <li>{@link #RUNNING 运行中}：接受新任务，处理排队任务。</li>
+	 *     <li>{@link #SHUTDOWN 关闭中}：不接受新任务，但处理排队任务。</li>
+	 *     <li>{@link #TERMINATED 已终结}：任务全部处理完成，且定序器已经关闭。</li>
 	 * </ul>
 	 */
-	protected volatile int state = RUNNING;
+	protected volatile int state = NEW;
 
 	/**
 	 * 构造复合执行调度器
@@ -96,10 +101,10 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 			throw new IllegalArgumentException();
 		}
 		OptionalInt max = handlers.keySet().stream().mapToInt(Enum::ordinal).max();
+		this.state = RUNNING;
 		this.nThreads = nThreads;
 		this.threadFactory = threadFactory;
 		this.serialization = serialization;
-
 		this.sequencers = ArrayUtils.newInstance(Sequencer.class, nThreads);
 		this.handlers = ArrayUtils.newInstance(Handler.class, max.getAsInt() + 1);
 		for (int i = start; i < end; i++) {
@@ -110,26 +115,44 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		handlers.forEach((key, value) -> this.handlers[key.ordinal()] = value);
 	}
 
-	protected void dispatch(int type, Runnable task, Object fence) {
+	/**
+	 * 更新最低运行状态
+	 *
+	 * @param stateAtLeast 最低运行状态
+	 */
+	private void casStateAtLeast(int stateAtLeast) {
+		int v;
+		do {
+			v = state;
+			if (v >= stateAtLeast) {
+				return;
+			}
+		} while (!VV.compareAndSet(this, v, stateAtLeast));
+	}
+
+	private void dispatch(int type, Runnable task, Object fence) {
 		Sequencer sequencer = sequencers[fence.hashCode() % nThreads];
 		Handler<Runnable> handler = handlers[type];
 		var wrapperTask = new DispatchTask1(handler, task, fence, sequencer);
 		sequencer.actuate(wrapperTask);
 	}
 
-	protected void dispatch(int type, Runnable task, Object fence0, Object fence1) {
+	private void dispatch(int type, Runnable task, Object fence0, Object fence1) {
 		Sequencer sequencer0 = sequencers[fence0.hashCode() % nThreads];
 		Sequencer sequencer1 = sequencers[fence1.hashCode() % nThreads];
 		Handler<Runnable> handler = handlers[type];
 		var wrapperTask = new DispatchTask2(handler, task, fence0, fence1, sequencer0, sequencer1);
 		if (sequencer0 == sequencer1) {
-			serialization.dispatch(wrapperTask);
+			serialization.dispatch(wrapperTask, sequencer0);
 		} else {
 			serialization.dispatch(wrapperTask, sequencer0, sequencer1);
 		}
 	}
 
-	protected void dispatch(int type, Runnable task, Object fence0, Object fence1, Object fence2) {
+	private void dispatch(int type, Runnable task, Object fence0, Object fence1, Object fence2) {
+		if (state > RUNNING) {
+			return;
+		}
 		Sequencer sequencer0 = sequencers[fence0.hashCode() % nThreads];
 		Sequencer sequencer1 = sequencers[fence1.hashCode() % nThreads];
 		Sequencer sequencer2 = sequencers[fence2.hashCode() % nThreads];
@@ -148,7 +171,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		}
 	}
 
-	protected void dispatch(int type, Runnable task, Object... fences) {
+	private void dispatch(int type, Runnable task, Object... fences) {
 		switch (fences.length) {
 			case 1 -> dispatch(type, task, fences[0]);
 			case 2 -> dispatch(type, task, fences[0], fences[1]);
@@ -206,6 +229,16 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		dispatch(type.ordinal(), task, fences);
 	}
 
+	@Override
+	public void shutdown() {
+		casStateAtLeast(SHUTDOWN);
+	}
+
+	@Override
+	public void shutdown(long timeout, TimeUnit timeUnit) {
+		casStateAtLeast(SHUTDOWN);
+	}
+
 	/**
 	 * 使用单独线程的定序器
 	 * <p>
@@ -248,7 +281,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		 * @param throwable {@code true}异常退出，{@code false}调度器关闭
 		 */
 		private void sequencerExit(boolean throwable) {
-			if (throwable && state < CLOSE) {
+			if (throwable && state < SHUTDOWN) {
 				start();
 			}
 		}
@@ -278,7 +311,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 			DispatchTask task = null;
 			for (; ; ) {
 				// 状态检测，如果线程池已停止
-				if (state >= SHUTDOWN || (state >= CLOSE && queue.isEmpty())) {
+				if (state >= SHUTDOWN || (state >= SHUTDOWN && queue.isEmpty())) {
 					return null;
 				}
 				Sync sync = this.sync;

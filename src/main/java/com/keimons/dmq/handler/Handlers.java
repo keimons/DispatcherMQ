@@ -23,7 +23,7 @@ public class Handlers {
 	}
 
 	public static Handler<Runnable> newFixedThreadHandler(
-			int nThreads, @NotNull RejectedHandler<Runnable> handler) {
+			int nThreads, @NotNull RejectedDeliveryHandler<Runnable> handler) {
 		return new ThreadPoolHandler(nThreads, nThreads, 0, TimeUnit.MILLISECONDS, handler);
 	}
 
@@ -33,7 +33,7 @@ public class Handlers {
 
 	public static Handler<Runnable> newCachedThreadHandler(
 			int corePoolSize, int maximumPoolSize, long keepAliveTime, @NotNull TimeUnit unit,
-			@NotNull RejectedHandler<Runnable> handler) {
+			@NotNull RejectedDeliveryHandler<Runnable> handler) {
 		return new ThreadPoolHandler(corePoolSize, maximumPoolSize, keepAliveTime, unit, handler);
 	}
 }

@@ -28,7 +28,7 @@ public class ScheduledThreadPoolHandler extends ScheduledThreadPoolExecutor impl
 		super(corePoolSize, threadFactory, defaultHandler);
 	}
 
-	public ScheduledThreadPoolHandler(int corePoolSize, @NotNull RejectedHandler<Runnable> handler) {
+	public ScheduledThreadPoolHandler(int corePoolSize, @NotNull RejectedDeliveryHandler<Runnable> handler) {
 		super(corePoolSize, new ThreadPoolHandler.AdaptPolicy(handler));
 	}
 
@@ -42,7 +42,7 @@ public class ScheduledThreadPoolHandler extends ScheduledThreadPoolExecutor impl
 		this.execute(new ThreadPoolHandler.Task(wrapperTask));
 	}
 
-	public void setRejectedHandler(@NotNull RejectedHandler<Runnable> handler) {
+	public void setRejectedHandler(@NotNull RejectedDeliveryHandler<Runnable> handler) {
 		super.setRejectedExecutionHandler(new ThreadPoolHandler.AdaptPolicy(handler));
 	}
 

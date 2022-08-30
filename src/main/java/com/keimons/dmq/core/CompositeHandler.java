@@ -2,6 +2,8 @@ package com.keimons.dmq.core;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * 带有任务调度功能的复合处理器
  * <p>
@@ -128,4 +130,11 @@ public interface CompositeHandler<E extends Enum<E>> extends Dispatcher<Runnable
 	 * @param fences 任务执行屏障
 	 */
 	void dispatch(E type, @NotNull Runnable task, Object... fences);
+
+	/**
+	 * 关闭复合处理器
+	 */
+	void shutdown();
+
+	void shutdown(final long timeout, final TimeUnit timeUnit);
 }

@@ -4,19 +4,19 @@ import com.keimons.dmq.core.Handler;
 import com.keimons.dmq.core.Wrapper;
 
 /**
- * 处理器拒绝
+ * 拒绝投递处理
  *
  * @author houyn[monkey@keimons.com]
  * @version 1.0
  * @since 17
  */
-public interface RejectedHandler<T> {
+public interface RejectedDeliveryHandler<T> {
 
 	/**
-	 * 拒绝处理
+	 * 处理拒绝投递
 	 *
 	 * @param wrapperTask 包装任务
-	 * @param executor
+	 * @param executor    异常
 	 */
-	void rejectedHandle(Wrapper<T> wrapperTask, Handler<T> executor);
+	void rejectedDelivery(Wrapper<T> wrapperTask, Handler<T> executor);
 }

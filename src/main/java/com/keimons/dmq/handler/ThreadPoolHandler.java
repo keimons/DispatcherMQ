@@ -37,19 +37,19 @@ public class ThreadPoolHandler extends ThreadPoolExecutor implements Handler<Run
 	}
 
 	public ThreadPoolHandler(int corePoolSize, int maximumPoolSize, long keepAliveTime, @NotNull TimeUnit unit,
-							 @NotNull RejectedHandler<Runnable> handler) {
+							 @NotNull RejectedDeliveryHandler<Runnable> handler) {
 		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, new LinkedBlockingQueue<>(),
 				new AdaptPolicy(handler));
 	}
 
 	public ThreadPoolHandler(int corePoolSize, int maximumPoolSize, long keepAliveTime, @NotNull TimeUnit unit,
 							 @NotNull ThreadFactory threadFactory,
-							 @NotNull RejectedHandler<Runnable> handler) {
+							 @NotNull RejectedDeliveryHandler<Runnable> handler) {
 		super(corePoolSize, maximumPoolSize, keepAliveTime, unit, new LinkedBlockingQueue<>(), threadFactory,
 				new AdaptPolicy(handler));
 	}
 
-	public void setRejectedHandler(@NotNull RejectedHandler<Runnable> handler) {
+	public void setRejectedHandler(@NotNull RejectedDeliveryHandler<Runnable> handler) {
 		super.setRejectedExecutionHandler(new AdaptPolicy(handler));
 	}
 
@@ -73,31 +73,31 @@ public class ThreadPoolHandler extends ThreadPoolExecutor implements Handler<Run
 
 	public static class AdaptPolicy implements RejectedExecutionHandler {
 
-		private final RejectedHandler<Runnable> handler;
+		private final RejectedDeliveryHandler<Runnable> handler;
 
-		public AdaptPolicy(RejectedHandler<Runnable> handler) {
+		public AdaptPolicy(RejectedDeliveryHandler<Runnable> handler) {
 			Objects.requireNonNull(handler);
 			this.handler = handler;
 		}
 
 		@Override
 		public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-			handler.rejectedHandle(((Task) r).wrapperTask, (ThreadPoolHandler) executor);
+			handler.rejectedDelivery(((Task) r).wrapperTask, (ThreadPoolHandler) executor);
 		}
 	}
 
-	public static class AbortPolicy implements RejectedHandler<Runnable> {
+	public static class AbortPolicy implements RejectedDeliveryHandler<Runnable> {
 
 		@Override
-		public void rejectedHandle(Wrapper<Runnable> wrapperTask, Handler<Runnable> executor) {
+		public void rejectedDelivery(Wrapper<Runnable> wrapperTask, Handler<Runnable> executor) {
 			wrapperTask.cancel();
 			throw new RejectedExecutionException("Task " + wrapperTask + " rejected from " + executor.toString());
 		}
 	}
 
-	public static class DiscardPolicy implements RejectedHandler<Runnable> {
+	public static class DiscardPolicy implements RejectedDeliveryHandler<Runnable> {
 
-		public void rejectedHandle(Wrapper<Runnable> wrapperTask, Handler<Runnable> executor) {
+		public void rejectedDelivery(Wrapper<Runnable> wrapperTask, Handler<Runnable> executor) {
 			wrapperTask.cancel();
 		}
 	}
