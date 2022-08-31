@@ -74,13 +74,12 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	 * <p>
 	 * 用于提供生命周期的所有状态。{@code state}的取值有：
 	 * <ul>
-	 *     <li>{@link #NEW 未启动}：尚未启动的调度器。</li>
 	 *     <li>{@link #RUNNING 运行中}：接受新任务，处理排队任务。</li>
 	 *     <li>{@link #SHUTDOWN 关闭中}：不接受新任务，但处理排队任务。</li>
 	 *     <li>{@link #TERMINATED 已终结}：任务全部处理完成，且定序器已经关闭。</li>
 	 * </ul>
 	 */
-	protected volatile int state = NEW;
+	protected volatile int state = RUNNING;
 
 	/**
 	 * 构造复合执行调度器
@@ -101,7 +100,6 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 			throw new IllegalArgumentException();
 		}
 		OptionalInt max = handlers.keySet().stream().mapToInt(Enum::ordinal).max();
-		this.state = RUNNING;
 		this.nThreads = nThreads;
 		this.threadFactory = threadFactory;
 		this.serialization = serialization;
@@ -128,6 +126,15 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 				return;
 			}
 		} while (!VV.compareAndSet(this, v, stateAtLeast));
+	}
+
+	private boolean isEmpty() {
+		for (int i = 0; i < sequencers.length; i++) {
+			if (!sequencers[i].isEmpty()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private void dispatch(int type, Runnable task, Object fence) {
@@ -232,11 +239,20 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	@Override
 	public void shutdown() {
 		casStateAtLeast(SHUTDOWN);
+		Stream.of(sequencers).filter(Objects::nonNull).forEach(sequencer -> sequencer.release(null));
 	}
 
 	@Override
 	public void shutdown(long timeout, TimeUnit timeUnit) {
-		casStateAtLeast(SHUTDOWN);
+		this.shutdown();
+		final long timeOutAt = System.currentTimeMillis() + timeUnit.toMillis(timeout);
+		while (!isEmpty()) {
+			if (timeout >= 0 && System.currentTimeMillis() > timeOutAt) {
+				throw new TimeoutException();
+			}
+			Thread.yield();
+			// Busy spin
+		}
 	}
 
 	/**
@@ -287,13 +303,18 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		}
 
 		@Override
+		public boolean isEmpty() {
+			return queue.isEmpty() && fences.isEmpty();
+		}
+
+		@Override
 		public void actuate(DispatchTask dispatchTask) {
 			queue.offer(dispatchTask);
 			sync.acquireWrite();
 		}
 
 		@Override
-		public void release(DispatchTask dispatchTask) {
+		public void release(@Nullable DispatchTask dispatchTask) {
 			sync.acquireWrite();
 		}
 
@@ -311,7 +332,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 			DispatchTask task = null;
 			for (; ; ) {
 				// 状态检测，如果线程池已停止
-				if (state >= SHUTDOWN || (state >= SHUTDOWN && queue.isEmpty())) {
+				if (state >= SHUTDOWN && queue.isEmpty() && fences.isEmpty()) {
 					return null;
 				}
 				Sync sync = this.sync;

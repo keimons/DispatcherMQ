@@ -1,5 +1,7 @@
 package com.keimons.dmq.core;
 
+import org.jetbrains.annotations.Nullable;
+
 /**
  * 定序器
  * <p>
@@ -22,6 +24,8 @@ package com.keimons.dmq.core;
  */
 public interface Sequencer {
 
+	boolean isEmpty();
+
 	/**
 	 * 启动一个调度任务
 	 * <p>
@@ -36,5 +40,5 @@ public interface Sequencer {
 	 *
 	 * @param dispatchTask 调度任务
 	 */
-	void release(DispatchTask dispatchTask);
+	void release(@Nullable DispatchTask dispatchTask);
 }

@@ -16,10 +16,10 @@ import java.util.concurrent.Executors;
  */
 public class Dispatchers {
 
-	private static final EnumMap<Type, Handler<Runnable>> DEFAULT_HANDLER_DIRECT = new EnumMap<>(Type.class);
+	public static final EnumMap<Type, Handler<Runnable>> DEFAULT_DIRECT_HANDLER = new EnumMap<>(Type.class);
 
 	static {
-		DEFAULT_HANDLER_DIRECT.put(Type.DEFAULT, Handlers.newDirectHandler());
+		DEFAULT_DIRECT_HANDLER.put(Type.DEFAULT, Handlers.newDirectHandler());
 	}
 
 	/**
@@ -37,7 +37,7 @@ public class Dispatchers {
 				nThreads, 0, nThreads,
 				SerialMode.producer(),
 				Executors.defaultThreadFactory(),
-				DEFAULT_HANDLER_DIRECT
+				DEFAULT_DIRECT_HANDLER
 		);
 	}
 
