@@ -128,15 +128,6 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		} while (!VV.compareAndSet(this, v, stateAtLeast));
 	}
 
-	private boolean isEmpty() {
-		for (int i = 0; i < sequencers.length; i++) {
-			if (!sequencers[i].isEmpty()) {
-				return false;
-			}
-		}
-		return true;
-	}
-
 	private void dispatch(int type, Runnable task, Object fence) {
 		Sequencer sequencer = sequencers[fence.hashCode() % nThreads];
 		Handler<Runnable> handler = handlers[type];
@@ -237,22 +228,38 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	}
 
 	@Override
+	public boolean isShutdown() {
+		if (state == RUNNING) {
+			return false;
+		}
+		if (state == TERMINATED) {
+			return true;
+		}
+		for (int i = 0; i < sequencers.length; i++) {
+			if (!sequencers[i].isShutdown()) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	@Override
 	public void shutdown() {
-		casStateAtLeast(SHUTDOWN);
-		Stream.of(sequencers).filter(Objects::nonNull).forEach(sequencer -> sequencer.release(null));
+		this.shutdown(-1, TimeUnit.MILLISECONDS);
 	}
 
 	@Override
 	public void shutdown(long timeout, TimeUnit timeUnit) {
-		this.shutdown();
+		casStateAtLeast(SHUTDOWN);
+		Stream.of(sequencers).filter(Objects::nonNull).forEach(sequencer -> sequencer.release(null));
 		final long timeOutAt = System.currentTimeMillis() + timeUnit.toMillis(timeout);
-		while (!isEmpty()) {
+		while (!isShutdown()) {
 			if (timeout >= 0 && System.currentTimeMillis() > timeOutAt) {
 				throw new TimeoutException();
 			}
 			Thread.yield();
-			// Busy spin
 		}
+		casStateAtLeast(TERMINATED);
 	}
 
 	/**
@@ -276,6 +283,11 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		Sync sync = new Sync();
 
 		/**
+		 * 定序器是否已关闭
+		 */
+		boolean shutdown = false;
+
+		/**
 		 * 启动一个线程
 		 */
 		private void start() {
@@ -296,15 +308,17 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		 *
 		 * @param throwable {@code true}异常退出，{@code false}调度器关闭
 		 */
-		private void sequencerExit(boolean throwable) {
+		private void exit(boolean throwable) {
 			if (throwable && state < SHUTDOWN) {
 				start();
+			} else {
+				shutdown = true;
 			}
 		}
 
 		@Override
-		public boolean isEmpty() {
-			return queue.isEmpty() && fences.isEmpty();
+		public boolean isShutdown() {
+			return shutdown;
 		}
 
 		@Override
@@ -332,7 +346,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 			DispatchTask task = null;
 			for (; ; ) {
 				// 状态检测，如果线程池已停止
-				if (state >= SHUTDOWN && queue.isEmpty() && fences.isEmpty()) {
+				if (state >= SHUTDOWN && queue.isEmpty()) {
 					return null;
 				}
 				Sync sync = this.sync;
@@ -374,7 +388,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 				}
 				throwable = false;
 			} finally {
-				sequencerExit(throwable);
+				exit(throwable);
 			}
 		}
 	}

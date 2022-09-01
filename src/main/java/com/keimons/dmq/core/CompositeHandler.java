@@ -131,6 +131,8 @@ public interface CompositeHandler<E extends Enum<E>> extends Dispatcher<Runnable
 	 */
 	void dispatch(E type, @NotNull Runnable task, Object... fences);
 
+	boolean isShutdown();
+
 	/**
 	 * 关闭复合处理器
 	 */

@@ -14,14 +14,16 @@ import org.junit.jupiter.api.Test;
  */
 public class CompositeHandlerExitTest {
 
+	private static final int N_THREAD = 10;
+
 	@Test
 	public void test() {
 		int count = Thread.activeCount();
-		CompositeHandler<?> dispatch = Dispatchers.newCompositeHandler(10, Dispatchers.DEFAULT_DIRECT_HANDLER);
+		CompositeHandler<?> dispatch = Dispatchers.newCompositeHandler(N_THREAD, Dispatchers.DEFAULT_DIRECT_HANDLER);
 		int newCount = Thread.activeCount();
-		Assertions.assertEquals(newCount, count + 10, "[调度器][退出] 创建线程数量错误");
+		Assertions.assertEquals(newCount, count + N_THREAD, "[调度器][退出] 创建线程数量错误");
+		dispatch.dispatch(() -> TimeUtils.SECONDS.sleep(2));
 		dispatch.shutdown();
-		TimeUtils.SECONDS.sleep(1);
 		Assertions.assertEquals(count, Thread.activeCount(), "[调度器][退出] 销毁线程数量错误");
 	}
 }

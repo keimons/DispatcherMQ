@@ -24,7 +24,15 @@ import org.jetbrains.annotations.Nullable;
  */
 public interface Sequencer {
 
-	boolean isEmpty();
+	/**
+	 * 返回定序器是否已关闭
+	 * <p>
+	 * {@link CompositeHandler 复合处理器}在关闭时，会关闭所有的定序器。
+	 * 返回此定序器是否已经关闭。
+	 *
+	 * @return {@code true}已关闭，{@code false}未关闭
+	 */
+	boolean isShutdown();
 
 	/**
 	 * 启动一个调度任务
