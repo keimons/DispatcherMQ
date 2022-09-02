@@ -3,6 +3,7 @@ package com.keimons.dmq.core;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * 带有任务调度功能的复合处理器
@@ -86,6 +87,17 @@ public interface CompositeHandler<E extends Enum<E>> extends Dispatcher<Runnable
 	 * 调度一个任务到复合处理器中，并在将来的某个时间执行给定的任务。根据处理器的实现，
 	 * 该任务可能在新线程、池线程或调度线程本地执行。如有必要，任务甚至可能被再次调度。
 	 *
+	 * @param type 使用的处理器
+	 * @param task 待执行的任务
+	 */
+	void dispatch(E type, @NotNull Runnable task);
+
+	/**
+	 * 调度一个可执行任务
+	 * <p>
+	 * 调度一个任务到复合处理器中，并在将来的某个时间执行给定的任务。根据处理器的实现，
+	 * 该任务可能在新线程、池线程或调度线程本地执行。如有必要，任务甚至可能被再次调度。
+	 *
 	 * @param type  使用的处理器
 	 * @param task  待执行的任务
 	 * @param fence 任务执行屏障
@@ -135,8 +147,28 @@ public interface CompositeHandler<E extends Enum<E>> extends Dispatcher<Runnable
 
 	/**
 	 * 关闭复合处理器
+	 * <p>
+	 * 停止接收新任务，处理排队中的任务，并关闭复合处理器。阻塞调用者直到复核处理器关闭。
 	 */
 	void shutdown();
 
-	void shutdown(final long timeout, final TimeUnit timeUnit);
+	/**
+	 * 关闭复合处理器
+	 * <p>
+	 * 停止接收新任务，处理排队中的任务，并关闭复合处理器。不等待超时方法立即返回的示例：
+	 * <pre>{@code
+	 * try {
+	 *     dispatch.shutdown(0, TimeUnit.MILLISECONDS);
+	 * } catch (TimeoutException e) {
+	 *     // ignore timeout exception
+	 * }
+	 * }</pre>
+	 * <b>注意</b>：此方法一旦被调用即可保证复合处理器会被关闭。
+	 *
+	 * @param timeout  超时时长，{@code "-1L"}表示不超时。
+	 * @param timeUnit 指定超时的时间单位
+	 * @throws TimeoutException 调度器关闭之前，发生了超时。
+	 * @see #shutdown() 关闭处理器
+	 */
+	void shutdown(final long timeout, @NotNull final TimeUnit timeUnit) throws TimeoutException;
 }

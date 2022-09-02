@@ -4,8 +4,6 @@ import com.keimons.dmq.core.CompositeHandler;
 import com.keimons.dmq.core.Dispatchers;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.TimeUnit;
-
 /**
  * 测试用例
  *
@@ -43,7 +41,7 @@ public class DirectHandlerTest {
 		dispatcher.dispatch(() -> System.out.println(6), 3, 0);
 		dispatcher.dispatch(() -> System.out.println(7), 3, 0);
 		System.out.println("任务发布完成");
-		dispatcher.shutdown(-1, TimeUnit.SECONDS);
+		dispatcher.shutdown();
 		System.out.println("调度器已退出");
 	}
 }

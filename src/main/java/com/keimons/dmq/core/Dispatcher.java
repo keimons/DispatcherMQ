@@ -67,6 +67,13 @@ public interface Dispatcher<T> {
 	/**
 	 * 调度一个任务
 	 *
+	 * @param task 待调度的任务
+	 */
+	void dispatch(@NotNull T task);
+
+	/**
+	 * 调度一个任务
+	 *
 	 * @param task  待调度的任务
 	 * @param fence 任务执行屏障
 	 */

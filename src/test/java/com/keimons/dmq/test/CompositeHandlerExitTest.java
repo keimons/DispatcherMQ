@@ -5,6 +5,9 @@ import com.keimons.dmq.core.Dispatchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 /**
  * 调度器退出测试
  *
@@ -21,9 +24,20 @@ public class CompositeHandlerExitTest {
 		int count = Thread.activeCount();
 		CompositeHandler<?> dispatch = Dispatchers.newCompositeHandler(N_THREAD, Dispatchers.DEFAULT_DIRECT_HANDLER);
 		int newCount = Thread.activeCount();
-		Assertions.assertEquals(newCount, count + N_THREAD, "[调度器][退出] 创建线程数量错误");
-		dispatch.dispatch(() -> TimeUtils.SECONDS.sleep(2));
+		Assertions.assertEquals(newCount, count + N_THREAD, "[调度器][正常退出] 创建线程数量错误");
+		dispatch.dispatch(() -> TimeUtils.SECONDS.sleep(3));
 		dispatch.shutdown();
-		Assertions.assertEquals(count, Thread.activeCount(), "[调度器][退出] 销毁线程数量错误");
+		Assertions.assertEquals(count, Thread.activeCount(), "[调度器][正常退出] 销毁线程数量错误");
+	}
+
+	@Test
+	public void testTimeout() {
+		CompositeHandler<?> dispatch = Dispatchers.newCompositeHandler(N_THREAD, Dispatchers.DEFAULT_DIRECT_HANDLER);
+		dispatch.dispatch(() -> TimeUtils.SECONDS.sleep(3));
+		Assertions.assertThrows(
+				TimeoutException.class,
+				() -> dispatch.shutdown(0, TimeUnit.MILLISECONDS),
+				"[调度器][超时退出] 超时退出异常"
+		);
 	}
 }

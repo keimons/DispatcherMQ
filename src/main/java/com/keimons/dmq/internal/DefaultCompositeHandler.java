@@ -8,10 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.invoke.VarHandle;
 import java.util.*;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Stream;
 
 /**
@@ -61,6 +58,10 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 
 	private final int nThreads;
 
+	private final int startIndex;
+
+	private final int endIndex;
+
 	private final ThreadFactory threadFactory;
 
 	private final Serialization serialization;
@@ -101,6 +102,8 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		}
 		OptionalInt max = handlers.keySet().stream().mapToInt(Enum::ordinal).max();
 		this.nThreads = nThreads;
+		this.startIndex = start;
+		this.endIndex = end;
 		this.threadFactory = threadFactory;
 		this.serialization = serialization;
 		this.sequencers = ArrayUtils.newInstance(Sequencer.class, nThreads);
@@ -126,6 +129,12 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 				return;
 			}
 		} while (!VV.compareAndSet(this, v, stateAtLeast));
+	}
+
+	private void tryTerminated() {
+		if (isShutdown()) {
+			casStateAtLeast(TERMINATED);
+		}
 	}
 
 	private void dispatch(int type, Runnable task, Object fence) {
@@ -186,6 +195,11 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	}
 
 	@Override
+	public void dispatch(@NotNull Runnable task) {
+		dispatch(0, task, ThreadLocalRandom.current().nextInt(startIndex, endIndex));
+	}
+
+	@Override
 	public void dispatch(@NotNull Runnable task, @NotNull Object fence) {
 		dispatch(0, task, fence);
 	}
@@ -204,6 +218,11 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	@Override
 	public void dispatch(@NotNull Runnable task, @NotNull Object... fences) {
 		dispatch(0, task, fences);
+	}
+
+	@Override
+	public void dispatch(E type, @NotNull Runnable task) {
+		dispatch(type.ordinal(), task, ThreadLocalRandom.current().nextInt(startIndex, endIndex));
 	}
 
 	@Override
@@ -245,11 +264,16 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 
 	@Override
 	public void shutdown() {
-		this.shutdown(-1, TimeUnit.MILLISECONDS);
+		try {
+			shutdown(-1, TimeUnit.MILLISECONDS);
+		} catch (TimeoutException e) {
+			// ignore exception
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override
-	public void shutdown(long timeout, TimeUnit timeUnit) {
+	public void shutdown(long timeout, @NotNull TimeUnit timeUnit) throws TimeoutException {
 		casStateAtLeast(SHUTDOWN);
 		Stream.of(sequencers).filter(Objects::nonNull).forEach(sequencer -> sequencer.release(null));
 		final long timeOutAt = System.currentTimeMillis() + timeUnit.toMillis(timeout);
@@ -259,7 +283,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 			}
 			Thread.yield();
 		}
-		casStateAtLeast(TERMINATED);
+		tryTerminated();
 	}
 
 	/**
@@ -313,6 +337,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 				start();
 			} else {
 				shutdown = true;
+				tryTerminated();
 			}
 		}
 
