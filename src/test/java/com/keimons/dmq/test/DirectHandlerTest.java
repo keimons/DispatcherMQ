@@ -2,6 +2,7 @@ package com.keimons.dmq.test;
 
 import com.keimons.dmq.core.CompositeHandler;
 import com.keimons.dmq.core.Dispatchers;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -13,35 +14,43 @@ import org.junit.jupiter.api.Test;
  */
 public class DirectHandlerTest {
 
+	private static final int TIMES = 10000;
+
 	@Test
-	public void test() throws InterruptedException {
+	public void test() {
+		Node node = new Node();
 		CompositeHandler<?> dispatcher = Dispatchers.newCompositeHandler(4, Dispatchers.DEFAULT_DIRECT_HANDLER);
-		for (int i = 0; i < 10000; i++) {
-			final int index = i;
-			dispatcher.dispatch(() -> System.out.println(index), 1);
+		for (int i = 0; i < TIMES; i++) {
+			dispatcher.dispatch(() -> node.number++, 1);
 		}
-		Thread.sleep(10000);
+		dispatcher.shutdown();
+		Assertions.assertEquals(node.number, TIMES, "[调度器][串行执行] 串行执行任务");
 	}
 
 	@Test
 	public void testOrder() {
+		Node node = new Node();
 		CompositeHandler<?> dispatcher = Dispatchers.newCompositeHandler(4, Dispatchers.DEFAULT_DIRECT_HANDLER);
 		dispatcher.dispatch(() -> {
 			TimeUtils.SECONDS.sleep(1);
-			System.out.println(0);
+			node.number++;
 		}, 0, 1);
-		dispatcher.dispatch(() -> System.out.println(1), 0, 1);
-		dispatcher.dispatch(() -> System.out.println(2), 1, 2);
-		dispatcher.dispatch(() -> System.out.println(3), 1, 2);
+		dispatcher.dispatch(() -> node.number++, 0, 1);
+		dispatcher.dispatch(() -> node.number++, 1, 2);
+		dispatcher.dispatch(() -> node.number++, 1, 2);
 		dispatcher.dispatch(() -> {
 			TimeUtils.SECONDS.sleep(1);
-			System.out.println(4);
+			node.number++;
 		}, 2, 3);
-		dispatcher.dispatch(() -> System.out.println(5), 2, 3);
-		dispatcher.dispatch(() -> System.out.println(6), 3, 0);
-		dispatcher.dispatch(() -> System.out.println(7), 3, 0);
-		System.out.println("任务发布完成");
+		dispatcher.dispatch(() -> node.number++, 2, 3);
+		dispatcher.dispatch(() -> node.number++, 3, 0);
+		dispatcher.dispatch(() -> node.number++, 0, 1);
 		dispatcher.shutdown();
-		System.out.println("调度器已退出");
+		Assertions.assertEquals(node.number, 8, "[调度器][串行执行] 串行执行任务");
+	}
+
+	private static class Node {
+
+		int number;
 	}
 }

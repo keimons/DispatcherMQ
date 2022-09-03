@@ -29,6 +29,11 @@ public class DispatchTask1 extends AbstractDispatchTask {
 	}
 
 	@Override
+	public void activateTask() {
+		sequencer.activate(this);
+	}
+
+	@Override
 	public boolean dependsOn(DispatchTask task) {
 		return task.dependsOn(fence);
 	}
@@ -36,10 +41,5 @@ public class DispatchTask1 extends AbstractDispatchTask {
 	@Override
 	public boolean dependsOn(Object fence) {
 		return this.fence.equals(fence);
-	}
-
-	@Override
-	public void wakeup() {
-		sequencer.release(this);
 	}
 }

@@ -1,5 +1,6 @@
 package com.keimons.dmq.core;
 
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -22,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
  * @version 1.0
  * @since 17
  */
+@ApiStatus.Experimental
 public interface Sequencer {
 
 	/**
@@ -35,18 +37,26 @@ public interface Sequencer {
 	boolean isShutdown();
 
 	/**
-	 * 启动一个调度任务
+	 * 提交调度任务
 	 * <p>
-	 * 调度任务可能在定序器中直接执行，也可能被调度到其它处理器中执行。
+	 * 定序器有可能对任务进行重排序。调度任务可能在定序器中直接执行，也可能被调度到其它处理器中执行。
 	 *
 	 * @param dispatchTask 调度任务
+	 * @see Handler
 	 */
-	void actuate(DispatchTask dispatchTask);
+	void commit(DispatchTask dispatchTask);
 
 	/**
-	 * 释放一个调度任务
+	 * 激活定序器
+	 * <p>
+	 * 将定序器从休眠中唤醒，使其继续处理任务。定序器的激活通常发生在：
+	 * <ul>
+	 *     <li>提交任务，任务被提交到定序器时；</li>
+	 *     <li>完成任务，任务完成后，出发后续任务；</li>
+	 *     <li>关闭定序器，使定序器正常退出。</li>
+	 * </ul>
 	 *
 	 * @param dispatchTask 调度任务
 	 */
-	void release(@Nullable DispatchTask dispatchTask);
+	void activate(@Nullable DispatchTask dispatchTask);
 }

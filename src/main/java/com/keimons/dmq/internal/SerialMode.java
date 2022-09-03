@@ -55,15 +55,15 @@ public class SerialMode {
 
 		@Override
 		public void dispatch(DispatchTask dispatchTask, Sequencer sequencer) {
-			sequencer.actuate(dispatchTask);
+			sequencer.commit(dispatchTask);
 		}
 
 		@Override
 		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1) {
 			main.lock();
 			try {
-				a0.actuate(dispatchTask);
-				a1.actuate(dispatchTask);
+				a0.commit(dispatchTask);
+				a1.commit(dispatchTask);
 			} finally {
 				main.unlock();
 			}
@@ -73,9 +73,9 @@ public class SerialMode {
 		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2) {
 			main.lock();
 			try {
-				a0.actuate(dispatchTask);
-				a1.actuate(dispatchTask);
-				a2.actuate(dispatchTask);
+				a0.commit(dispatchTask);
+				a1.commit(dispatchTask);
+				a2.commit(dispatchTask);
 			} finally {
 				main.unlock();
 			}
@@ -85,10 +85,10 @@ public class SerialMode {
 		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2, Sequencer a3) {
 			main.lock();
 			try {
-				a0.actuate(dispatchTask);
-				a1.actuate(dispatchTask);
-				a2.actuate(dispatchTask);
-				a3.actuate(dispatchTask);
+				a0.commit(dispatchTask);
+				a1.commit(dispatchTask);
+				a2.commit(dispatchTask);
+				a3.commit(dispatchTask);
 			} finally {
 				main.unlock();
 			}
@@ -99,11 +99,11 @@ public class SerialMode {
 							 Sequencer a4) {
 			main.lock();
 			try {
-				a0.actuate(dispatchTask);
-				a1.actuate(dispatchTask);
-				a2.actuate(dispatchTask);
-				a3.actuate(dispatchTask);
-				a4.actuate(dispatchTask);
+				a0.commit(dispatchTask);
+				a1.commit(dispatchTask);
+				a2.commit(dispatchTask);
+				a3.commit(dispatchTask);
+				a4.commit(dispatchTask);
 			} finally {
 				main.unlock();
 			}
@@ -114,7 +114,7 @@ public class SerialMode {
 			main.lock();
 			try {
 				for (int i = 0; i < sequencers.length; i++) {
-					sequencers[i].actuate(dispatchTask);
+					sequencers[i].commit(dispatchTask);
 				}
 			} finally {
 				main.unlock();
@@ -132,7 +132,7 @@ public class SerialMode {
 		public void dispatch(DispatchTask dispatchTask, Sequencer sequencer) {
 			main.lock();
 			try {
-				sequencer.actuate(dispatchTask);
+				sequencer.commit(dispatchTask);
 			} finally {
 				main.unlock();
 			}

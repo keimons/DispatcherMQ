@@ -38,24 +38,38 @@ import org.jetbrains.annotations.ApiStatus;
 public interface DispatchTask extends Interceptor {
 
 	/**
+	 * 交付任务
+	 * <p>
+	 * 将任务交付至任务处理器，并在将来的合适的时机执行。
+	 *
+	 * @see Handler 任务处理器
+	 */
+	void deliveryTask();
+
+	/**
+	 * 激活任务
+	 * <p>
+	 * 使任务重新回到活跃的状态。需要在以下时刻激活任务：
+	 * <ul>
+	 *     <li>任务被{@link Sequencer 定序器}消费后；</li>
+	 *     <li>任务被{@link Handler 处理器}成功处理后；</li>
+	 *     <li>任务取消执行后。</li>
+	 * </ul>
+	 * 调度任务内部包含定序器，激活任务的同时，也会激活定序器。定序器重新判定调度任务的状态，
+	 * 使得执行屏障失效，从而触发后续调度任务的执行。
+	 */
+	void activateTask();
+
+	/**
 	 * 判断是否依赖另一个任务
+	 * <p>
+	 * 如果一个任务依赖另一个任务，那么这两个任务不能重排序执行，否则，两个不相关的任务，
+	 * 可以重排序执行。
 	 *
 	 * @param task 要判断是否依赖的任务
 	 * @return {@code true}依赖这个任务
 	 */
 	boolean dependsOn(DispatchTask task);
-
-	/**
-	 * 投递任务
-	 * <p>
-	 * 将任务投递至任务处理器，并在将来的合适的时机执行。
-	 */
-	void deliver();
-
-	/**
-	 * 唤醒任务
-	 */
-	void wakeup();
 
 	/**
 	 * 判断是否依赖另一个屏障

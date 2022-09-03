@@ -45,7 +45,7 @@ public abstract class AbstractDispatchTask implements DispatchTask, Wrapper<Runn
 	}
 
 	@Override
-	public void deliver() {
+	public void deliveryTask() {
 		handler.handle(this);
 	}
 
@@ -76,7 +76,7 @@ public abstract class AbstractDispatchTask implements DispatchTask, Wrapper<Runn
 		} finally {
 			// 必须确保：1. 拦截器释放；2. 关联线程唤醒。
 			this.release();
-			this.wakeup();
+			this.activateTask();
 		}
 	}
 
@@ -84,7 +84,7 @@ public abstract class AbstractDispatchTask implements DispatchTask, Wrapper<Runn
 	public void cancel() {
 		// 必须确保：1. 拦截器释放；2. 关联线程唤醒。
 		this.release();
-		this.wakeup();
+		this.activateTask();
 	}
 
 	@Override

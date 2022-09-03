@@ -37,6 +37,16 @@ public class DispatchTask2 extends AbstractDispatchTask {
 	}
 
 	@Override
+	public void activateTask() {
+		if (sequencer0 == sequencer1) {
+			sequencer0.activate(this);
+		} else {
+			sequencer0.activate(this);
+			sequencer1.activate(this);
+		}
+	}
+
+	@Override
 	public boolean dependsOn(DispatchTask task) {
 		return task.dependsOn(fence0, fence1);
 	}
@@ -44,15 +54,5 @@ public class DispatchTask2 extends AbstractDispatchTask {
 	@Override
 	public boolean dependsOn(Object fence) {
 		return fence0.equals(fence) || fence1.equals(fence);
-	}
-
-	@Override
-	public void wakeup() {
-		if (sequencer0 == sequencer1) {
-			sequencer0.release(this);
-		} else {
-			sequencer0.release(this);
-			sequencer1.release(this);
-		}
 	}
 }

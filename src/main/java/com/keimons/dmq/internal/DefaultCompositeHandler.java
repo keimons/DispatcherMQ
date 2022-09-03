@@ -141,7 +141,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		Sequencer sequencer = sequencers[fence.hashCode() % nThreads];
 		Handler<Runnable> handler = handlers[type];
 		var wrapperTask = new DispatchTask1(handler, task, fence, sequencer);
-		sequencer.actuate(wrapperTask);
+		sequencer.commit(wrapperTask);
 	}
 
 	private void dispatch(int type, Runnable task, Object fence0, Object fence1) {
@@ -236,8 +236,8 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	}
 
 	@Override
-	public void dispatch(@NotNull E type, @NotNull Runnable task, @NotNull Object fence0, @NotNull Object fence1,
-						 @NotNull Object fence2) {
+	public void dispatch(@NotNull E type, @NotNull Runnable task,
+						 @NotNull Object fence0, @NotNull Object fence1, @NotNull Object fence2) {
 		dispatch(type.ordinal(), task, fence0, fence1, fence2);
 	}
 
@@ -275,7 +275,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	@Override
 	public void shutdown(long timeout, @NotNull TimeUnit timeUnit) throws TimeoutException {
 		casStateAtLeast(SHUTDOWN);
-		Stream.of(sequencers).filter(Objects::nonNull).forEach(sequencer -> sequencer.release(null));
+		Stream.of(sequencers).filter(Objects::nonNull).forEach(sequencer -> sequencer.activate(null));
 		final long timeOutAt = System.currentTimeMillis() + timeUnit.toMillis(timeout);
 		while (!isShutdown()) {
 			if (timeout >= 0 && System.currentTimeMillis() > timeOutAt) {
@@ -309,7 +309,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		/**
 		 * 定序器是否已关闭
 		 */
-		boolean shutdown = false;
+		volatile boolean shutdown = false;
 
 		/**
 		 * 启动一个线程
@@ -347,13 +347,13 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		}
 
 		@Override
-		public void actuate(DispatchTask dispatchTask) {
+		public void commit(DispatchTask dispatchTask) {
 			queue.offer(dispatchTask);
 			sync.acquireWrite();
 		}
 
 		@Override
-		public void release(@Nullable DispatchTask dispatchTask) {
+		public void activate(@Nullable DispatchTask dispatchTask) {
 			sync.acquireWrite();
 		}
 
@@ -385,7 +385,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 						iterator.remove();
 						if (task.tryIntercept()) {
 							fences.add(task);
-							task.wakeup();
+							task.activateTask();
 						} else {
 							return task;
 						}
@@ -404,7 +404,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 				DispatchTask task;
 				while ((task = next()) != null) {
 					try {
-						task.deliver();
+						task.deliveryTask();
 					} finally {
 						if (task.isIntercepted()) {
 							fences.add(task);

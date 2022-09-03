@@ -33,6 +33,13 @@ public class DispatchTaskX extends AbstractDispatchTask {
 	}
 
 	@Override
+	public void activateTask() {
+		for (Sequencer sequencer : sequencers) {
+			sequencer.activate(this);
+		}
+	}
+
+	@Override
 	public boolean dependsOn(DispatchTask task) {
 		return task.dependsOn(fences);
 	}
@@ -45,12 +52,5 @@ public class DispatchTaskX extends AbstractDispatchTask {
 			}
 		}
 		return false;
-	}
-
-	@Override
-	public void wakeup() {
-		for (Sequencer sequencer : sequencers) {
-			sequencer.release(this);
-		}
 	}
 }
