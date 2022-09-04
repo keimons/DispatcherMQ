@@ -1,5 +1,7 @@
-module DispatcherMQ.test {
+module com.keimons.dispatcher.test {
+	requires com.keimons.dispatcher.core;
 	requires org.junit.jupiter.api;
-	requires com.keimons.dmp;
-	exports com.keimons.dmq.test;
+	requires org.jetbrains.annotations;
+
+	exports com.keimons.dispatcher.test;
 }

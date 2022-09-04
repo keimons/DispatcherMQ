@@ -1,7 +1,6 @@
-module com.keimons.dmp {
+module com.keimons.dispatcher.core {
 	requires org.jetbrains.annotations;
-	exports com.keimons.dmq.core;
-	exports com.keimons.dmq.utils;
-	exports com.keimons.dmq.handler;
-	exports com.keimons.dmq.internal;
+
+	exports com.keimons.dispatcher.core;
+	exports com.keimons.dispatcher.core.handler;
 }
