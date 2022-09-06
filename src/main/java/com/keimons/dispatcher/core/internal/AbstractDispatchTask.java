@@ -4,7 +4,6 @@ import com.keimons.dispatcher.core.DispatchTask;
 import com.keimons.dispatcher.core.Handler;
 import com.keimons.dispatcher.core.Wrapper;
 import com.keimons.dispatcher.core.utils.MiscUtils;
-import jdk.internal.vm.annotation.Contended;
 
 import java.lang.invoke.VarHandle;
 
@@ -31,17 +30,12 @@ public abstract class AbstractDispatchTask implements DispatchTask, Wrapper<Runn
 	/**
 	 * 剩余拦截量
 	 */
-	@Contended
-	protected volatile int forbids;
+	private volatile int forbids;
 
-	/**
-	 * 是否拦截中
-	 */
-	protected volatile boolean intercepted = true;
-
-	protected AbstractDispatchTask(Handler<Runnable> handler, Runnable task) {
+	protected AbstractDispatchTask(Handler<Runnable> handler, Runnable task, int forbids) {
 		this.handler = handler;
 		this.task = task;
+		this.forbids = forbids;
 	}
 
 	@Override
@@ -55,17 +49,18 @@ public abstract class AbstractDispatchTask implements DispatchTask, Wrapper<Runn
 		do {
 			v = forbids;
 		} while (!VV.compareAndSet(this, v, v - 1));
-		return v > 0;
+		// 最后一个触碰任务的线程返回false
+		return v > 1;
 	}
 
 	@Override
 	public boolean isIntercepted() {
-		return intercepted;
+		return forbids >= 0;
 	}
 
 	@Override
 	public void release() {
-		this.intercepted = false;
+		this.forbids = -1;
 	}
 
 	@Override

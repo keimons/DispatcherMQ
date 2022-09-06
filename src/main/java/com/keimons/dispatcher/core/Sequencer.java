@@ -26,6 +26,8 @@ import org.jetbrains.annotations.Nullable;
 @ApiStatus.Experimental
 public interface Sequencer {
 
+	int sequencerId();
+
 	/**
 	 * 返回定序器是否已关闭
 	 * <p>

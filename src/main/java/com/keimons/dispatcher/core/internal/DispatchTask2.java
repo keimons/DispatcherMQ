@@ -23,10 +23,9 @@ public class DispatchTask2 extends AbstractDispatchTask {
 
 	public DispatchTask2(Handler<Runnable> handler, Runnable task, Object fence0, Object fence1,
 						 Sequencer sequencer0, Sequencer sequencer1) {
-		super(handler, task);
+		super(handler, task, sequencer0 == sequencer1 ? 1 : 2);
 		this.fence0 = fence0;
 		this.fence1 = fence1;
-		this.forbids = sequencer0 == sequencer1 ? 0 : 1;
 		this.sequencer0 = sequencer0;
 		this.sequencer1 = sequencer1;
 	}
@@ -38,12 +37,8 @@ public class DispatchTask2 extends AbstractDispatchTask {
 
 	@Override
 	public void activateTask() {
-		if (sequencer0 == sequencer1) {
-			sequencer0.activate(this);
-		} else {
-			sequencer0.activate(this);
-			sequencer1.activate(this);
-		}
+		sequencer0.activate(this);
+		sequencer1.activate(this);
 	}
 
 	@Override

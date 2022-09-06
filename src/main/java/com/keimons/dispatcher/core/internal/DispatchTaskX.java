@@ -21,10 +21,9 @@ public class DispatchTaskX extends AbstractDispatchTask {
 	final Sequencer[] sequencers;
 
 	public DispatchTaskX(Handler<Runnable> handler, Runnable task, Object[] fences, Sequencer[] sequencers) {
-		super(handler, task);
+		super(handler, task, sequencers.length);
 		this.fences = fences;
 		this.sequencers = sequencers;
-		this.forbids = sequencers.length - 1;
 	}
 
 	@Override

@@ -38,8 +38,7 @@ public class RejectedDeliveryHandlerTest {
 		}, 3);
 		dispatcher.shutdown();
 		long useTime = System.currentTimeMillis() - startTime;
-		System.out.println("[调度器][阻塞调用] 耗时：" + useTime);
-		Assertions.assertTrue(3900 <= useTime && useTime <= 4100, "[调度器][阻塞调用] 调用耗时：" +  useTime);
+		Assertions.assertTrue(4000 <= useTime && useTime <= 4050, "[调度器][阻塞调用] 调用耗时：" + useTime);
 	}
 
 	enum HandlerType {

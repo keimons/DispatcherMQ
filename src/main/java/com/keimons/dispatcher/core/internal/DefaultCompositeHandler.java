@@ -108,10 +108,10 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		this.serialization = serialization;
 		this.sequencers = ArrayUtils.newInstance(Sequencer.class, nThreads);
 		this.handlers = ArrayUtils.newInstance(Handler.class, max.getAsInt() + 1);
-		for (int i = start; i < end; i++) {
-			ThreadSequencer sequencer = new ThreadSequencer();
+		for (int index = start; index < end; index++) {
+			ThreadSequencer sequencer = new ThreadSequencer(index);
 			sequencer.start();
-			sequencers[i] = sequencer;
+			sequencers[index] = sequencer;
 		}
 		handlers.forEach((key, value) -> this.handlers[key.ordinal()] = value);
 	}
@@ -297,6 +297,8 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	 */
 	private class ThreadSequencer implements Sequencer, Runnable {
 
+		private final int sequencerId;
+
 		BlockingDeque<DispatchTask> queue = new LinkedBlockingDeque<>();
 
 		List<DispatchTask> fences = new LinkedList<>();
@@ -310,6 +312,10 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		 * 定序器是否已关闭
 		 */
 		volatile boolean shutdown = false;
+
+		private ThreadSequencer(int sequencerId) {
+			this.sequencerId = sequencerId;
+		}
 
 		/**
 		 * 启动一个线程
@@ -339,6 +345,11 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 				shutdown = true;
 				tryTerminated();
 			}
+		}
+
+		@Override
+		public int sequencerId() {
+			return sequencerId;
 		}
 
 		@Override

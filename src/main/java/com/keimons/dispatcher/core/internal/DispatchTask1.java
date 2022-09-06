@@ -18,7 +18,7 @@ public class DispatchTask1 extends AbstractDispatchTask {
 	final Sequencer sequencer;
 
 	public DispatchTask1(Handler<Runnable> handler, Runnable task, Object fence, Sequencer sequencer) {
-		super(handler, task);
+		super(handler, task, 1);
 		this.fence = fence;
 		this.sequencer = sequencer;
 	}
