@@ -24,7 +24,7 @@ public class RejectedDeliveryHandlerTest {
 	public void testBlockingCaller() {
 		EnumMap<HandlerType, Handler<Runnable>> handlers = new EnumMap<>(HandlerType.class);
 		handlers.put(HandlerType.POOL, new ThreadPoolHandler(
-				1, 1, 0, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(1))
+				0, 1, 0, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(1))
 		);
 		CompositeHandler<HandlerType> dispatcher = Dispatchers.newCompositeHandler(1, handlers);
 		dispatcher.dispatch(EmptyTask.instance, 1);
