@@ -36,7 +36,7 @@ public class Dispatchers {
 	public static Dispatcher<Runnable> newDispatcher(int nThreads) {
 		return new DefaultCompositeHandler<>(
 				nThreads, 0, nThreads,
-				SerialMode.producer(),
+				2028, 8192, SerialMode.producer(),
 				Executors.defaultThreadFactory(),
 				DEFAULT_DIRECT_HANDLER
 		);
@@ -53,7 +53,7 @@ public class Dispatchers {
 	public static <E extends Enum<E>> CompositeHandler<E> newCompositeHandler(
 			int nThreads, EnumMap<E, Handler<Runnable>> handlers) {
 		return new DefaultCompositeHandler<>(nThreads, 0, nThreads,
-				SerialMode.producer(), Executors.defaultThreadFactory(), handlers
+				2028, 8192, SerialMode.producer(), Executors.defaultThreadFactory(), handlers
 		);
 	}
 

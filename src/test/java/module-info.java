@@ -4,4 +4,5 @@ module com.keimons.dispatcher.test {
 	requires org.jetbrains.annotations;
 
 	exports com.keimons.dispatcher.test;
+	exports com.keimons.dispatcher.test.performance;
 }

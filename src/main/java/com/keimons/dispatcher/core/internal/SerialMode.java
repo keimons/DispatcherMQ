@@ -30,7 +30,7 @@ public class SerialMode {
 	 * <p>
 	 * 先到先消费原则，能够提供针对于所有生产者而言的最强一致性。
 	 */
-	public static Serialization complete() {
+	public static Deliverer complete() {
 		return new CompleteSerial();
 	}
 
@@ -40,11 +40,11 @@ public class SerialMode {
 	 * 提供针对于单个生产者的先到先消费的强一致性。尽管这个实现并不能保证绝对的串行，
 	 * 但生产者一致性能提供更好的性能。
 	 */
-	public static Serialization producer() {
+	public static Deliverer producer() {
 		return new ProducerSerial(false);
 	}
 
-	private static class ProducerSerial implements Serialization {
+	private static class ProducerSerial implements Deliverer {
 
 		protected final Lock main;
 
@@ -82,38 +82,10 @@ public class SerialMode {
 		}
 
 		@Override
-		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2, Sequencer a3) {
-			main.lock();
-			try {
-				a0.commit(dispatchTask);
-				a1.commit(dispatchTask);
-				a2.commit(dispatchTask);
-				a3.commit(dispatchTask);
-			} finally {
-				main.unlock();
-			}
-		}
-
-		@Override
-		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2, Sequencer a3,
-							 Sequencer a4) {
-			main.lock();
-			try {
-				a0.commit(dispatchTask);
-				a1.commit(dispatchTask);
-				a2.commit(dispatchTask);
-				a3.commit(dispatchTask);
-				a4.commit(dispatchTask);
-			} finally {
-				main.unlock();
-			}
-		}
-
-		@Override
 		public void dispatch(DispatchTask dispatchTask, Sequencer... sequencers) {
 			main.lock();
 			try {
-				for (int i = 0; i < sequencers.length; i++) {
+				for (int i = 0, length = sequencers.length; i < length; i++) {
 					sequencers[i].commit(dispatchTask);
 				}
 			} finally {

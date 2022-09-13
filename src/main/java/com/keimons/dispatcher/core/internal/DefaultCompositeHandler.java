@@ -64,7 +64,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 
 	private final ThreadFactory threadFactory;
 
-	private final Serialization serialization;
+	private final Deliverer deliverer;
 
 	private final Handler<Runnable>[] handlers;
 
@@ -91,10 +91,13 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 	 * @param nThreads      总线程数量
 	 * @param start         当前调度器开始位置
 	 * @param end           当前调度器结束位置
-	 * @param serialization 排序类型
+	 * @param queueCapacity 队列容量，每个线程允许的最大队列容量
+	 * @param fenceCapacity 屏障容量，每个线程允许的最大屏障数量
+	 * @param deliverer     排序类型
 	 * @param handlers      复合处理器
 	 */
-	public DefaultCompositeHandler(int nThreads, int start, int end, Serialization serialization,
+	public DefaultCompositeHandler(int nThreads, int start, int end, int queueCapacity, int fenceCapacity,
+								   Deliverer deliverer,
 								   ThreadFactory threadFactory, EnumMap<E, Handler<Runnable>> handlers) {
 		// 0 <= start < end <= nThread
 		if (!(0 <= start && start < end && end <= nThreads) || handlers == null || handlers.size() < 1) {
@@ -105,7 +108,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		this.startIndex = start;
 		this.endIndex = end;
 		this.threadFactory = threadFactory;
-		this.serialization = serialization;
+		this.deliverer = deliverer;
 		this.sequencers = ArrayUtils.newInstance(Sequencer.class, nThreads);
 		this.handlers = ArrayUtils.newInstance(Handler.class, max.getAsInt() + 1);
 		for (int index = start; index < end; index++) {
@@ -150,9 +153,9 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		Handler<Runnable> handler = handlers[type];
 		var wrapperTask = new DispatchTask2(handler, task, fence0, fence1, sequencer0, sequencer1);
 		if (sequencer0 == sequencer1) {
-			serialization.dispatch(wrapperTask, sequencer0);
+			deliverer.dispatch(wrapperTask, sequencer0);
 		} else {
-			serialization.dispatch(wrapperTask, sequencer0, sequencer1);
+			deliverer.dispatch(wrapperTask, sequencer0, sequencer1);
 		}
 	}
 
@@ -167,14 +170,14 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		var wrapperTask = new DispatchTask3(handler, task, fence0, sequencer0, fence1, sequencer1, fence2, sequencer2);
 		if (sequencer0 == sequencer1) {
 			if (sequencer0 == sequencer2) {
-				serialization.dispatch(wrapperTask, sequencer0);
+				deliverer.dispatch(wrapperTask, sequencer0);
 			} else {
-				serialization.dispatch(wrapperTask, sequencer0, sequencer2);
+				deliverer.dispatch(wrapperTask, sequencer0, sequencer2);
 			}
 		} else if (sequencer0 == sequencer2 || sequencer1 == sequencer2) {
-			serialization.dispatch(wrapperTask, sequencer0, sequencer1);
+			deliverer.dispatch(wrapperTask, sequencer0, sequencer1);
 		} else {
-			serialization.dispatch(wrapperTask, sequencer0, sequencer1, sequencer2);
+			deliverer.dispatch(wrapperTask, sequencer0, sequencer1, sequencer2);
 		}
 	}
 
@@ -189,7 +192,7 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 				Sequencer[] sequencers = stream.toArray(Sequencer[]::new);
 				Handler<Runnable> handler = handlers[type];
 				var wrapperTask = new DispatchTaskX(handler, task, fences, sequencers);
-				serialization.dispatch(wrapperTask, sequencers);
+				deliverer.dispatch(wrapperTask, sequencers);
 			}
 		}
 	}

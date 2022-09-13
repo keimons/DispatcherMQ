@@ -30,7 +30,7 @@ public class DispatchTask3 extends AbstractDispatchTask {
 						 Object fence0, Sequencer sequencer0,
 						 Object fence1, Sequencer sequencer1,
 						 Object fence2, Sequencer sequencer2) {
-		super(handler, task, ForbidsUtils.calcForbids(sequencer0, sequencer1, sequencer2, null, null));
+		super(handler, task, ForbidsUtils.calcForbids(sequencer0, sequencer1, sequencer2));
 		this.fence0 = fence0;
 		this.sequencer0 = sequencer0;
 		this.fence1 = fence1;

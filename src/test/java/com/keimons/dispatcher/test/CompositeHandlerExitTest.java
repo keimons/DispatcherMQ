@@ -26,7 +26,8 @@ public class CompositeHandlerExitTest {
 		ThreadGroup group = new ThreadGroup("test");
 		int count = group.activeCount();
 		CompositeHandler<?> dispatch = new DefaultCompositeHandler<>(N_THREAD, 0, N_THREAD,
-				SerialMode.producer(), ThreadUtils.createThreadFactory(group), Dispatchers.DEFAULT_DIRECT_HANDLER
+				2028, 8192, SerialMode.producer(), ThreadUtils.createThreadFactory(group),
+				Dispatchers.DEFAULT_DIRECT_HANDLER
 		);
 		int newCount = group.activeCount();
 		Assertions.assertEquals(newCount, count + N_THREAD, "[调度器][正常退出] 创建线程数量错误");
