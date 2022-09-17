@@ -144,7 +144,8 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		Sequencer sequencer = sequencers[fence.hashCode() % nThreads];
 		Handler<Runnable> handler = handlers[type];
 		var wrapperTask = new DispatchTask1(handler, task, fence, sequencer);
-		sequencer.commit(wrapperTask);
+		long stamp = sequencer.tryOptimisticRead();
+		sequencer.commit(stamp, wrapperTask);
 	}
 
 	private void dispatch(int type, Runnable task, Object fence0, Object fence1) {
@@ -361,9 +362,15 @@ public class DefaultCompositeHandler<E extends Enum<E>> implements CompositeHand
 		}
 
 		@Override
-		public void commit(DispatchTask dispatchTask) {
+		public long tryOptimisticRead() {
+			return 0;
+		}
+
+		@Override
+		public boolean commit(long stamp, DispatchTask dispatchTask) {
 			queue.offer(dispatchTask);
 			sync.acquireWrite();
+			return true;
 		}
 
 		@Override

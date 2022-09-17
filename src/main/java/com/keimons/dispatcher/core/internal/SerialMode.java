@@ -55,15 +55,18 @@ public class SerialMode {
 
 		@Override
 		public void dispatch(DispatchTask dispatchTask, Sequencer sequencer) {
-			sequencer.commit(dispatchTask);
+			long stamp = sequencer.tryOptimisticRead();
+			sequencer.commit(stamp, dispatchTask);
 		}
 
 		@Override
 		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1) {
 			main.lock();
 			try {
-				a0.commit(dispatchTask);
-				a1.commit(dispatchTask);
+				long stamp0 = a0.tryOptimisticRead();
+				a0.commit(stamp0, dispatchTask);
+				long stamp1 = a1.tryOptimisticRead();
+				a1.commit(stamp1, dispatchTask);
 			} finally {
 				main.unlock();
 			}
@@ -73,9 +76,12 @@ public class SerialMode {
 		public void dispatch(DispatchTask dispatchTask, Sequencer a0, Sequencer a1, Sequencer a2) {
 			main.lock();
 			try {
-				a0.commit(dispatchTask);
-				a1.commit(dispatchTask);
-				a2.commit(dispatchTask);
+				long stamp0 = a0.tryOptimisticRead();
+				a0.commit(stamp0, dispatchTask);
+				long stamp1 = a1.tryOptimisticRead();
+				a1.commit(stamp1, dispatchTask);
+				long stamp2 = a2.tryOptimisticRead();
+				a2.commit(stamp2, dispatchTask);
 			} finally {
 				main.unlock();
 			}
@@ -86,7 +92,8 @@ public class SerialMode {
 			main.lock();
 			try {
 				for (int i = 0, length = sequencers.length; i < length; i++) {
-					sequencers[i].commit(dispatchTask);
+					long stamp = sequencers[i].tryOptimisticRead();
+					sequencers[i].commit(stamp, dispatchTask);
 				}
 			} finally {
 				main.unlock();
@@ -104,7 +111,8 @@ public class SerialMode {
 		public void dispatch(DispatchTask dispatchTask, Sequencer sequencer) {
 			main.lock();
 			try {
-				sequencer.commit(dispatchTask);
+				long stamp = sequencer.tryOptimisticRead();
+				sequencer.commit(stamp, dispatchTask);
 			} finally {
 				main.unlock();
 			}

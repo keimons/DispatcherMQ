@@ -26,6 +26,11 @@ import org.jetbrains.annotations.Nullable;
 @ApiStatus.Experimental
 public interface Sequencer {
 
+	/**
+	 * 获取定序器ID
+	 *
+	 * @return 定序器ID
+	 */
 	int sequencerId();
 
 	/**
@@ -38,15 +43,19 @@ public interface Sequencer {
 	 */
 	boolean isShutdown();
 
+	long tryOptimisticRead();
+
 	/**
 	 * 提交调度任务
 	 * <p>
 	 * 定序器有可能对任务进行重排序。调度任务可能在定序器中直接执行，也可能被调度到其它处理器中执行。
 	 *
+	 * @param stamp        放入位置
 	 * @param dispatchTask 调度任务
+	 * @return {@code true}提交成功，{@code false}提交失败
 	 * @see Handler
 	 */
-	void commit(DispatchTask dispatchTask);
+	boolean commit(long stamp, DispatchTask dispatchTask);
 
 	/**
 	 * 激活定序器
